@@ -13,4 +13,5 @@ public class Prestazione : AuditableEntity
 
     public Servizio Servizio { get; set; } = null!;
     public ICollection<Tariffa> Tariffe { get; set; } = new List<Tariffa>();
+    public ICollection<Turno> Turni { get; set; } = new List<Turno>();
 }

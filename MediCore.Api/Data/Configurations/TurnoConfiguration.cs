@@ -15,9 +15,8 @@ public class TurnoConfiguration : IEntityTypeConfiguration<Turno>
             .HasForeignKey(t => t.MedicoId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Prestazione non espone la collezione inversa: relazione monodirezionale.
         builder.HasOne(t => t.Prestazione)
-            .WithMany()
+            .WithMany(p => p.Turni)
             .HasForeignKey(t => t.PrestazioneId)
             .OnDelete(DeleteBehavior.Restrict);
     }
