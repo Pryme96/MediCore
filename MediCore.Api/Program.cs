@@ -25,6 +25,9 @@ try
     builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlite(connectionString));
 
+    // Necessaria ai token provider di Identity (AddIdentityCore non la registra da sola).
+    builder.Services.AddDataProtection();
+
     builder.Services.AddIdentityCore<AppUser>(options =>
         {
             options.User.RequireUniqueEmail = true;
