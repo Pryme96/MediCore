@@ -12,4 +12,6 @@ public class Medico : AuditableEntity
 
     public AppUser User { get; set; } = null!;
     public Servizio Servizio { get; set; } = null!;
+    public ICollection<Turno> Turni { get; set; } = new List<Turno>();
+    public ICollection<Prescrizione> Prescrizioni { get; set; } = new List<Prescrizione>();
 }

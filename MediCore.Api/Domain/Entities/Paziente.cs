@@ -12,4 +12,8 @@ public class Paziente : AuditableEntity
     public string Telefono { get; set; } = null!;
 
     public AppUser User { get; set; } = null!;
+    public ICollection<Prenotazione> Prenotazioni { get; set; } = new List<Prenotazione>();
+    public ICollection<Prescrizione> Prescrizioni { get; set; } = new List<Prescrizione>();
+    public ICollection<Fattura> Fatture { get; set; } = new List<Fattura>();
+    public ICollection<ChatMessage> ChatMessages { get; set; } = new List<ChatMessage>();
 }
