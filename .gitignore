@@ -18,5 +18,6 @@ dist/
 .env
 .env.local
 
-## Varie
+## Log (Serilog)
+logs/
 *.log

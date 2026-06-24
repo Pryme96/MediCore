@@ -1,23 +1,69 @@
-var builder = WebApplication.CreateBuilder(args);
+using MediCore.Api.Data;
+using MediCore.Api.Domain.Entities;
+using MediCore.Api.Infrastructure;
+using MediCore.Api.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+using Serilog.Formatting.Json;
 
-// Add services to the container.
+// Logger di bootstrap: cattura anche gli errori in fase di avvio.
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.File(
+        new JsonFormatter(),
+        "logs/medicore-.json",
+        rollingInterval: RollingInterval.Day)
+    .CreateLogger();
 
-builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+try
 {
-    app.MapOpenApi();
+    var builder = WebApplication.CreateBuilder(args);
+
+    builder.Host.UseSerilog();
+
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlite(connectionString));
+
+    builder.Services.AddIdentityCore<AppUser>(options =>
+        {
+            options.User.RequireUniqueEmail = true;
+            options.Password.RequiredLength = 8;
+        })
+        .AddRoles<IdentityRole>()
+        .AddEntityFrameworkStores<AppDbContext>()
+        .AddDefaultTokenProviders();
+
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+
+    builder.Services.AddControllers();
+    builder.Services.AddEndpointsApiExplorer();
+    builder.Services.AddSwaggerGen();
+
+    var app = builder.Build();
+
+    app.UseSerilogRequestLogging();
+
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseSwagger();
+        app.UseSwaggerUI();
+    }
+
+    app.UseHttpsRedirection();
+
+    app.UseAuthorization();
+
+    app.MapControllers();
+
+    app.Run();
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Avvio dell'applicazione terminato in modo inatteso");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
