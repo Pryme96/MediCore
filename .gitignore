@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+.vs/
+*.user
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+## Database SQLite locale
+*.db
+*.db-shm
+*.db-wal
+
+## Frontend (React + Vite)
+node_modules/
+dist/
+.env
+.env.local
+
+## Varie
+*.log
