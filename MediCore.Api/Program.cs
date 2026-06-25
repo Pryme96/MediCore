@@ -91,6 +91,14 @@ try
 
     var app = builder.Build();
 
+    // Applica le migration pendenti e popola ruoli/amministratore all'avvio.
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        await services.GetRequiredService<AppDbContext>().Database.MigrateAsync();
+        await IdentityDataSeeder.SeedAsync(services, app.Configuration);
+    }
+
     app.UseSerilogRequestLogging();
 
     if (app.Environment.IsDevelopment())
