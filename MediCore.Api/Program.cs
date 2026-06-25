@@ -67,6 +67,7 @@ try
 
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+    builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
