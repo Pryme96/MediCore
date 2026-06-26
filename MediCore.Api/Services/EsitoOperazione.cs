@@ -6,5 +6,6 @@ public enum EsitoOperazione
     Ok,
     NonTrovato,
     RiferimentoNonValido,
-    Conflitto
+    Conflitto,
+    DatiNonValidi
 }

@@ -71,6 +71,8 @@ try
     builder.Services.AddScoped<IServizioService, ServizioService>();
     builder.Services.AddScoped<IPrestazioneService, PrestazioneService>();
     builder.Services.AddScoped<ITariffaService, TariffaService>();
+    builder.Services.AddScoped<ITurnoService, TurnoService>();
+    builder.Services.AddScoped<IMedicoService, MedicoService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

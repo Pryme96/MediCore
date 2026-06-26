@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="MediCore.Api.IntegrationTests/MediCore.Api.IntegrationTests.csproj" Id="fa9c5417-f83f-4b28-8b22-d3fec9605053" />
+  <Project Path="MediCore.Api.Tests/MediCore.Api.Tests.csproj" Id="4e014861-3f15-48b1-98eb-a938a679e390" />
   <Project Path="MediCore.Api/MediCore.Api.csproj" />
 </Solution>
