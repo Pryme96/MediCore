@@ -64,6 +64,23 @@ public class MedicoService(AppDbContext db, UserManager<AppUser> userManager) : 
         return (EsitoOperazione.Ok, risposta);
     }
 
+    public async Task<EsitoOperazione> UpdateAsync(Guid id, MedicoUpdateRequest request)
+    {
+        var medico = await db.Medici.FirstOrDefaultAsync(m => m.MedicoId == id);
+        if (medico is null)
+            return EsitoOperazione.NonTrovato;
+
+        var servizioEsiste = await db.Servizi.AnyAsync(s => s.ServizioId == request.ServizioId);
+        if (!servizioEsiste)
+            return EsitoOperazione.RiferimentoNonValido;
+
+        medico.Specializzazione = request.Specializzazione;
+        medico.ServizioId = request.ServizioId;
+        await db.SaveChangesAsync();
+
+        return EsitoOperazione.Ok;
+    }
+
     // Password temporanea conforme alle regole di Identity (maiuscola, minuscola, cifra, carattere speciale, min 8 caratteri).
     private static string GeneraPassword()
     {

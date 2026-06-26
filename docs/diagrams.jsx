@@ -218,13 +218,13 @@ const USE_CASES = {
 };
 
 const CLASS_DIAGRAM = [
-  { name: "AuthController",          type: "Controller", color: "#475569", methods: ["POST /auth/register", "POST /auth/login", "POST /auth/logout", "GET /auth/me"] },
+  { name: "AuthController",          type: "Controller", color: "#475569", methods: ["POST /auth/register", "POST /auth/login", "GET /auth/me"] },
   { name: "PazienteController",      type: "Controller", color: "#2563eb", methods: ["GET /pazienti", "GET /pazienti/{id}", "POST /pazienti", "PUT /pazienti/{id}"] },
   { name: "MedicoController",        type: "Controller", color: "#0891b2", methods: ["GET /medici", "GET /medici/{id}", "POST /medici", "PUT /medici/{id}"] },
-  { name: "ServizioController",      type: "Controller", color: "#7c3aed", methods: ["GET /servizi", "GET /servizi/{id}/prestazioni", "POST /servizi", "PUT /servizi/{id}"] },
+  { name: "ServizioController",      type: "Controller", color: "#7c3aed", methods: ["GET /servizi", "GET /servizi/{id}", "GET /servizi/{id}/prestazioni", "POST /servizi", "PUT /servizi/{id}"] },
   { name: "PrestazioneController",   type: "Controller", color: "#0d9488", methods: ["GET /prestazioni", "GET /prestazioni/{id}", "POST /prestazioni", "PUT /prestazioni/{id}"] },
-  { name: "TariffaController",       type: "Controller", color: "#854d0e", methods: ["GET /tariffe/prestazione/{id}", "POST /tariffe", "PUT /tariffe/{id}", "DELETE /tariffe/{id}"] },
-  { name: "TurnoController",         type: "Controller", color: "#065f46", methods: ["GET /turni", "POST /turni", "PUT /turni/{id}"] },
+  { name: "TariffaController",       type: "Controller", color: "#854d0e", methods: ["GET /tariffe/{id}", "GET /tariffe/prestazione/{id}", "POST /tariffe", "PUT /tariffe/{id}", "DELETE /tariffe/{id}"] },
+  { name: "TurnoController",         type: "Controller", color: "#065f46", methods: ["GET /turni", "GET /turni/{id}", "GET /turni/medico/{medicoId}", "POST /turni", "PUT /turni/{id}", "DELETE /turni/{id}"] },
   { name: "SlotController",          type: "Controller", color: "#047857", methods: ["GET /slot/disponibili", "GET /slot/{id}", "POST /slot/blocca/{id}"] },
   { name: "PrenotazioneController",  type: "Controller", color: "#059669", methods: ["GET /prenotazioni", "POST /prenotazioni", "PATCH /prenotazioni/{id}/stato", "DELETE /prenotazioni/{id}"] },
   { name: "RefertoController",       type: "Controller", color: "#d97706", methods: ["GET /referti/paziente/{id}", "POST /referti", "GET /referti/{id}/download"] },

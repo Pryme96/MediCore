@@ -184,6 +184,30 @@ public class EndToEndScenarioTests
         });
         Assert.Equal(HttpStatusCode.BadRequest, medicoServizioInesistenteResponse.StatusCode);
 
+        // 7ter. Aggiorna Specializzazione/ServizioId del Medico.
+        var medicoUpdateResponse = await client.PutAsync($"medici/{medicoCreato.Medico.Id}", new
+        {
+            Specializzazione = "Cardiologia interventistica",
+            ServizioId = servizio.Id
+        });
+        Assert.Equal(HttpStatusCode.NoContent, medicoUpdateResponse.StatusCode);
+
+        var medicoUpdateInesistenteResponse = await client.PutAsync($"medici/{Guid.NewGuid()}", new
+        {
+            Specializzazione = "x",
+            ServizioId = servizio.Id
+        });
+        Assert.Equal(HttpStatusCode.NotFound, medicoUpdateInesistenteResponse.StatusCode);
+
+        client.UseToken(tokenPaziente);
+        var medicoUpdateComePazienteResponse = await client.PutAsync($"medici/{medicoCreato.Medico.Id}", new
+        {
+            Specializzazione = "x",
+            ServizioId = servizio.Id
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, medicoUpdateComePazienteResponse.StatusCode);
+        client.UseToken(tokenAdmin);
+
         // 8. Crea Turno per il Medico sulla Prestazione appena creata.
         var turnoResponse = await client.PostAsync("turni", new
         {
@@ -250,5 +274,11 @@ public class EndToEndScenarioTests
         client.UseToken(tokenPaziente);
         var getTurnoComePaziente = await client.GetAsync($"turni/{turno!.Id}");
         Assert.Equal(HttpStatusCode.OK, getTurnoComePaziente.StatusCode);
+
+        // 11. GET /turni generico (tutti i turni, nessun filtro) è leggibile da qualsiasi autenticato.
+        var getTuttiITurniComePaziente = await client.GetAsync("turni");
+        Assert.Equal(HttpStatusCode.OK, getTuttiITurniComePaziente.StatusCode);
+        var tuttiITurni = await getTuttiITurniComePaziente.Content.ReadFromJsonAsync<List<TurnoResponse>>();
+        Assert.Contains(tuttiITurni!, t => t.Id == turno.Id);
     }
 }

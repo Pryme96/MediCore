@@ -55,6 +55,20 @@ public class TurnoServiceTests
     };
 
     [Fact]
+    public async Task GetAllAsync_restituisce_tutti_i_turni_creati()
+    {
+        var (db, medico, prestazione) = await SetupAsync();
+        var service = new TurnoService(db);
+
+        await service.CreateAsync(BuildRequest(medico, prestazione, new TimeOnly(9, 0), new TimeOnly(12, 0)));
+        await service.CreateAsync(BuildRequest(medico, prestazione, new TimeOnly(12, 0), new TimeOnly(15, 0)));
+
+        var tutti = await service.GetAllAsync();
+
+        Assert.Equal(2, tutti.Count);
+    }
+
+    [Fact]
     public async Task CreateAsync_con_dati_validi_restituisce_Ok()
     {
         var (db, medico, prestazione) = await SetupAsync();

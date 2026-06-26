@@ -123,4 +123,75 @@ public class MedicoServiceTests
 
         Assert.Null(risultato);
     }
+
+    [Fact]
+    public async Task UpdateAsync_con_dati_validi_applica_le_modifiche()
+    {
+        var (db, servizio) = await SetupAsync();
+        var altroServizio = new Servizio { Nome = "Ortopedia", Descrizione = "x" };
+        db.Servizi.Add(altroServizio);
+        await db.SaveChangesAsync();
+
+        var userManager = UserManagerFactory.Create(db);
+        var service = new MedicoService(db, userManager);
+        var (_, creato) = await service.CreateAsync(new MedicoRequest
+        {
+            Email = "mario.rossi@medicore.local",
+            Nome = "Mario",
+            Cognome = "Rossi",
+            Specializzazione = "Cardiologia",
+            ServizioId = servizio.ServizioId
+        });
+
+        var esito = await service.UpdateAsync(creato!.Medico.Id, new MedicoUpdateRequest
+        {
+            Specializzazione = "Ortopedia generale",
+            ServizioId = altroServizio.ServizioId
+        });
+        var aggiornato = await service.GetByIdAsync(creato.Medico.Id);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.Equal("Ortopedia generale", aggiornato!.Specializzazione);
+        Assert.Equal(altroServizio.ServizioId, aggiornato.ServizioId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_su_medico_inesistente_restituisce_NonTrovato()
+    {
+        var db = AppDbContextFactory.Create();
+        var userManager = UserManagerFactory.Create(db);
+        var service = new MedicoService(db, userManager);
+
+        var esito = await service.UpdateAsync(Guid.NewGuid(), new MedicoUpdateRequest
+        {
+            Specializzazione = "x",
+            ServizioId = Guid.NewGuid()
+        });
+
+        Assert.Equal(EsitoOperazione.NonTrovato, esito);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_con_servizio_inesistente_restituisce_RiferimentoNonValido()
+    {
+        var (db, servizio) = await SetupAsync();
+        var userManager = UserManagerFactory.Create(db);
+        var service = new MedicoService(db, userManager);
+        var (_, creato) = await service.CreateAsync(new MedicoRequest
+        {
+            Email = "mario.rossi@medicore.local",
+            Nome = "Mario",
+            Cognome = "Rossi",
+            Specializzazione = "Cardiologia",
+            ServizioId = servizio.ServizioId
+        });
+
+        var esito = await service.UpdateAsync(creato!.Medico.Id, new MedicoUpdateRequest
+        {
+            Specializzazione = "x",
+            ServizioId = Guid.NewGuid()
+        });
+
+        Assert.Equal(EsitoOperazione.RiferimentoNonValido, esito);
+    }
 }

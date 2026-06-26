@@ -36,4 +36,15 @@ public class MedicoController(IMedicoService medicoService) : ControllerBase
             _ => BadRequest()
         };
     }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = AppRoles.Amministratore)]
+    public async Task<IActionResult> Update(Guid id, MedicoUpdateRequest request) =>
+        await medicoService.UpdateAsync(id, request) switch
+        {
+            EsitoOperazione.Ok => NoContent(),
+            EsitoOperazione.NonTrovato => NotFound(),
+            EsitoOperazione.RiferimentoNonValido => BadRequest("Il servizio indicato non esiste."),
+            _ => BadRequest()
+        };
 }

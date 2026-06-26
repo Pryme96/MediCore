@@ -7,6 +7,10 @@ namespace MediCore.Api.Services;
 
 public class TurnoService(AppDbContext db) : ITurnoService
 {
+    public async Task<IReadOnlyList<TurnoResponse>> GetAllAsync() =>
+        await Project(db.Turni.AsNoTracking()
+            .OrderBy(t => t.GiornoSettimana).ThenBy(t => t.OraInizio)).ToListAsync();
+
     public async Task<IReadOnlyList<TurnoResponse>> GetByMedicoAsync(Guid medicoId) =>
         await Project(db.Turni.AsNoTracking()
             .Where(t => t.MedicoId == medicoId)

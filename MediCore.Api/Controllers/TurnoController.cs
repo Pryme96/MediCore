@@ -11,6 +11,10 @@ namespace MediCore.Api.Controllers;
 [Authorize]
 public class TurnoController(ITurnoService turnoService) : ControllerBase
 {
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<TurnoResponse>>> GetAll() =>
+        Ok(await turnoService.GetAllAsync());
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<TurnoResponse>> GetById(Guid id)
     {
