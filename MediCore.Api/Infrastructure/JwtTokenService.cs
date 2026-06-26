@@ -8,14 +8,9 @@ using Microsoft.IdentityModel.Tokens;
 namespace MediCore.Api.Infrastructure;
 
 // Costruisce e firma il token JWT di accesso a partire dalla configurazione.
-public class JwtTokenService : ITokenService
+public class JwtTokenService(IConfiguration configuration) : ITokenService
 {
-    private readonly IConfiguration _configuration;
-
-    public JwtTokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
+    private readonly IConfiguration _configuration = configuration;
 
     public TokenResult CreateToken(AppUser user, IList<string> roles)
     {

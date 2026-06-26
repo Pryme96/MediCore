@@ -68,6 +68,9 @@ try
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
     builder.Services.AddScoped<ITokenService, JwtTokenService>();
+    builder.Services.AddScoped<IServizioService, ServizioService>();
+    builder.Services.AddScoped<IPrestazioneService, PrestazioneService>();
+    builder.Services.AddScoped<ITariffaService, TariffaService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
