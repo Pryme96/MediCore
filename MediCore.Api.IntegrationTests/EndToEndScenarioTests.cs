@@ -280,5 +280,17 @@ public class EndToEndScenarioTests
         Assert.Equal(HttpStatusCode.OK, getTuttiITurniComePaziente.StatusCode);
         var tuttiITurni = await getTuttiITurniComePaziente.Content.ReadFromJsonAsync<List<TurnoResponse>>();
         Assert.Contains(tuttiITurni!, t => t.Id == turno.Id);
+
+        // 12. Il paziente cerca gli slot disponibili per la Prestazione: generazione lazy
+        // sulla finestra di 60 giorni a partire dal Turno creato al passo 8 (ogni Lunedì, 9-12, slot da 20 min).
+        var getSlotComePazienteResponse = await client.GetAsync($"slot/prestazione/{prestazione!.Id}");
+        Assert.Equal(HttpStatusCode.OK, getSlotComePazienteResponse.StatusCode);
+        var slotDisponibili = await getSlotComePazienteResponse.Content.ReadFromJsonAsync<List<SlotResponse>>();
+        Assert.NotEmpty(slotDisponibili!);
+        Assert.All(slotDisponibili!, s => Assert.Equal(turno.Id, s.TurnoId));
+
+        // 12bis. Prestazione inesistente -> 404.
+        var getSlotPrestazioneInesistenteResponse = await client.GetAsync($"slot/prestazione/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, getSlotPrestazioneInesistenteResponse.StatusCode);
     }
 }

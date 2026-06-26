@@ -73,6 +73,7 @@ try
     builder.Services.AddScoped<ITariffaService, TariffaService>();
     builder.Services.AddScoped<ITurnoService, TurnoService>();
     builder.Services.AddScoped<IMedicoService, MedicoService>();
+    builder.Services.AddScoped<ISlotService, SlotService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

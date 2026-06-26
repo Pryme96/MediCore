@@ -43,3 +43,11 @@ public record TurnoResponse(
     TimeOnly OraInizio,
     TimeOnly OraFine,
     int DurataSlotMin);
+
+public record SlotResponse(
+    Guid Id,
+    Guid TurnoId,
+    Guid MedicoId,
+    string MedicoNomeCompleto,
+    DateTime DataOraInizio,
+    DateTime DataOraFine);
