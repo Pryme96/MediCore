@@ -72,3 +72,15 @@ public record PrenotazioneResponse(
     Regime Regime,
     StatoPrenotazione Stato,
     string? Note);
+
+public record PrescrizioneResponse(
+    Guid Id,
+    Guid PazienteId,
+    string PazienteNomeCompleto,
+    Guid MedicoId,
+    string MedicoNomeCompleto,
+    DateOnly DataEmissione,
+    DateOnly DataScadenza,
+    string Farmaci,
+    string? Note,
+    bool NotificaInviata);

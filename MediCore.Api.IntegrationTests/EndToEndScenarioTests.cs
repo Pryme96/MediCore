@@ -345,5 +345,74 @@ public class EndToEndScenarioTests
             Regime = Regime.Ssn
         });
         Assert.Equal(HttpStatusCode.BadRequest, prenotazioneSlotInesistenteResponse.StatusCode);
+
+        // 17. Login del Medico creato al passo 7 (la prenotazione annullata al passo 15 resta
+        // comunque una prenotazione "pregressa" tra questo Medico e questo Paziente).
+        var tokenMedico = await client.LoginAsync(emailMedico, medicoCreato.PasswordGenerata);
+        Assert.False(string.IsNullOrWhiteSpace(tokenMedico));
+        client.UseToken(tokenMedico);
+
+        // 18. Il Paziente NON può creare una Prescrizione (solo Medico).
+        client.UseToken(tokenPaziente);
+        var creaPrescrizioneComePazienteResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Farmaci = "Test farmaco"
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, creaPrescrizioneComePazienteResponse.StatusCode);
+
+        // 19. Il Medico crea una Prescrizione per il Paziente con cui ha una prenotazione pregressa.
+        client.UseToken(tokenMedico);
+        var prescrizioneResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Farmaci = "Test farmaco"
+        });
+        Assert.Equal(HttpStatusCode.Created, prescrizioneResponse.StatusCode);
+        var prescrizione = await prescrizioneResponse.Content.ReadFromJsonAsync<PrescrizioneResponse>();
+        Assert.NotNull(prescrizione);
+        Assert.True(prescrizione!.NotificaInviata);
+
+        // 19bis. Paziente senza prenotazioni pregresse con questo Medico -> 400.
+        var prescrizioneSenzaStoricoResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = Guid.NewGuid(),
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Farmaci = "Test farmaco"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, prescrizioneSenzaStoricoResponse.StatusCode);
+
+        // 19ter. DataScadenza non successiva a DataEmissione -> 400.
+        var oggi = DateOnly.FromDateTime(DateTime.Now);
+        var prescrizioneDataNonValidaResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            DataEmissione = oggi,
+            DataScadenza = oggi,
+            Farmaci = "Test farmaco"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, prescrizioneDataNonValidaResponse.StatusCode);
+
+        // 20. GET /prescrizioni/emesse come Medico autore include la prescrizione appena creata.
+        var getEmesseResponse = await client.GetAsync("prescrizioni/emesse");
+        Assert.Equal(HttpStatusCode.OK, getEmesseResponse.StatusCode);
+        var emesse = await getEmesseResponse.Content.ReadFromJsonAsync<List<PrescrizioneResponse>>();
+        Assert.Contains(emesse!, p => p.Id == prescrizione.Id);
+
+        // 21. GET /prescrizioni/mie come Paziente proprietario include la prescrizione.
+        client.UseToken(tokenPaziente);
+        var getMiePrescrizioniResponse = await client.GetAsync("prescrizioni/mie");
+        Assert.Equal(HttpStatusCode.OK, getMiePrescrizioniResponse.StatusCode);
+        var miePrescrizioni = await getMiePrescrizioniResponse.Content.ReadFromJsonAsync<List<PrescrizioneResponse>>();
+        Assert.Contains(miePrescrizioni!, p => p.Id == prescrizione.Id);
+
+        // 22. GET /prescrizioni/{id} come Paziente proprietario -> 200.
+        var getPrescrizioneByIdResponse = await client.GetAsync($"prescrizioni/{prescrizione.Id}");
+        Assert.Equal(HttpStatusCode.OK, getPrescrizioneByIdResponse.StatusCode);
     }
 }
