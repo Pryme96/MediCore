@@ -5,6 +5,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { register } from "../api/auth";
 import { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { palette } from "../theme/colors";
 import type { RegisterRequest } from "../types/auth";
 
 type RegisterFormValues = Omit<RegisterRequest, "dataNascita"> & { dataNascita: Dayjs };
@@ -33,8 +34,20 @@ export function Register() {
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", width: "100%" }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        width: "100%",
+        background: `linear-gradient(180deg, ${palette.primaryDark}, ${palette.backgroundTint})`,
+      }}
+    >
       <Card style={{ width: 420 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <img src="/logo.png" alt="MediCore" style={{ maxHeight: 64 }} />
+        </div>
         <Typography.Title level={3} style={{ textAlign: "center" }}>
           Registrazione Paziente
         </Typography.Title>

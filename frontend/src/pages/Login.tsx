@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { login } from "../api/auth";
 import { getErrorMessage } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { palette } from "../theme/colors";
 import type { LoginRequest } from "../types/auth";
 
 export function Login() {
@@ -27,8 +28,20 @@ export function Login() {
   };
 
   return (
-    <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", width: "100%" }}>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100vh",
+        width: "100%",
+        background: `linear-gradient(180deg, ${palette.primaryDark}, ${palette.backgroundTint})`,
+      }}
+    >
       <Card style={{ width: 360 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+          <img src="/logo.png" alt="MediCore" style={{ maxHeight: 64 }} />
+        </div>
         <Typography.Title level={3} style={{ textAlign: "center" }}>
           Accedi a MediCore
         </Typography.Title>

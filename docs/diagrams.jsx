@@ -159,18 +159,6 @@ const ER_ENTITIES = [
       ...AUDIT_FIELDS,
     ],
   },
-  {
-    name: "ChatMessage",
-    color: "#4f46e5",
-    attrs: [
-      { name: "MessageId", type: "PK", pk: true },
-      { name: "PazienteId", type: "FK", fk: true },
-      { name: "Ruolo", type: "enum" },
-      { name: "Contenuto", type: "text" },
-      { name: "Timestamp", type: "datetime" },
-      ...AUDIT_FIELDS,
-    ],
-  },
 ];
 
 const ER_RELATIONS = [
@@ -188,7 +176,6 @@ const ER_RELATIONS = [
   { from: "Prenotazione", to: "Fattura",       label: "1..1", fromSide: "bottom", toSide: "top"   },
   { from: "Paziente",     to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
   { from: "Medico",       to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
-  { from: "Paziente",     to: "ChatMessage",   label: "1..N", fromSide: "right",  toSide: "left"  },
 ];
 
 const USE_CASES = {
@@ -208,7 +195,7 @@ const USE_CASES = {
     { id: "UC11", name: "Visualizza storico prescrizioni",   actors: ["Paziente", "Medico"] },
     { id: "UC12", name: "Dashboard KPI finanziaria",         actors: ["Amministratore"] },
     { id: "UC13", name: "Commento AI dashboard",             actors: ["Amministratore", "Sistema AI (Mistral)"] },
-    { id: "UC14", name: "Chat con assistente AI",            actors: ["Paziente", "Sistema AI (Mistral)"] },
+    { id: "UC14", name: "Assistenza AI redazione prescrizione (HITL)", actors: ["Medico", "Sistema AI (Mistral)"] },
     { id: "UC15", name: "Gestione fatture",                   actors: ["Amministratore"] },
     { id: "UC16", name: "Gestione utenti e ruoli",           actors: ["Amministratore"] },
     { id: "UC17", name: "Gestione servizi e prestazioni",    actors: ["Amministratore"] },
@@ -231,10 +218,10 @@ const CLASS_DIAGRAM = [
   { name: "PrescrizioneController",  type: "Controller", color: "#dc2626", methods: ["GET /prescrizioni/paziente/{id}", "POST /prescrizioni", "POST /prescrizioni/{id}/notifica"] },
   { name: "FatturaController",       type: "Controller", color: "#be185d", methods: ["GET /fatture/paziente/{id}", "POST /fatture", "PATCH /fatture/{id}/stato", "GET /fatture/{id}"] },
   { name: "DashboardController",     type: "Controller", color: "#475569", methods: ["GET /dashboard/kpi", "GET /dashboard/fatturato", "GET /dashboard/commento-ai"] },
-  { name: "ChatController",          type: "Controller", color: "#4f46e5", methods: ["POST /chat/messaggio", "GET /chat/storico/{pazienteId}"] },
-  { name: "MistralService",          type: "Service",    color: "#4f46e5", methods: ["SendMessageAsync()", "GenerateDashboardCommentAsync()", "BuildContext()"] },
+  { name: "AiController",            type: "Controller", color: "#4f46e5", methods: ["POST /ai/suggerisci"] },
+  { name: "MistralService",          type: "Service",    color: "#4f46e5", methods: ["SuggerisciPrescrizioneAsync()", "GenerateDashboardCommentAsync()", "BuildContext()"] },
   { name: "FileStorageService",      type: "Service",    color: "#d97706", methods: ["UploadAsync()", "DownloadAsync()", "DeleteAsync()"] },
-  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<Fattura>", "DbSet<ChatMessage>", "SaveChangesAsync() [audit]"] },
+  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<Fattura>", "SaveChangesAsync() [audit]"] },
 ];
 
 // ---- Layout positions ----
@@ -249,7 +236,6 @@ const ER_POS = {
   Tariffa:      { x: 980, y: 542  },
   Slot:         { x: 500, y: 900  },
   Prenotazione: { x: 220, y: 900  },
-  ChatMessage:  { x: 740, y: 900  },
   Referto:      { x: 20,  y: 1240 },
   Fattura:      { x: 260, y: 1240 },
 };

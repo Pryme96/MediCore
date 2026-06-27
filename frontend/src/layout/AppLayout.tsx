@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Layout, Menu, Button, Typography, Card } from "antd";
+import { Layout, Menu, Button, Typography, Card, Avatar } from "antd";
 import {
   MedicineBoxOutlined,
   CalendarOutlined,
@@ -8,6 +8,8 @@ import {
   EuroCircleOutlined,
   TeamOutlined,
   ScheduleOutlined,
+  UserOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -54,14 +56,16 @@ export function AppLayout() {
       <Sider breakpoint="lg" style={{ background: palette.primary }}>
         <div
           style={{
-            color: "#fff",
-            textAlign: "center",
-            padding: "16px",
-            fontSize: "18px",
-            fontWeight: 600
+            height: 64,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#fff",
           }}
         >
-          MediCore
+          <Link to="/" style={{ display: "flex", alignItems: "center" }}>
+            <img src="/logo.png" alt="MediCore" style={{ display: "block", maxHeight: 52, maxWidth: "100%" }} />
+          </Link>
         </div>
         <Menu
           theme="dark"
@@ -83,17 +87,15 @@ export function AppLayout() {
             alignItems: "center",
             gap: 16,
             background: "#fff",
-            boxShadow: "none",
-            borderBottom: `3px solid ${palette.primary}`,
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
           }}
         >
+          <Avatar icon={<UserOutlined />} style={{ background: palette.primary }} />
           <Typography.Text style={{ color: palette.primary }}>{user?.email}</Typography.Text>
-          <Button type="primary" onClick={handleLogout}>Logout</Button>
+          <Button type="primary" icon={<LogoutOutlined />} onClick={handleLogout}>Logout</Button>
         </Header>
         <Content style={{ padding: 24 }}>
-          <Card>
             <Outlet />
-          </Card>
         </Content>
       </Layout>
     </Layout>
