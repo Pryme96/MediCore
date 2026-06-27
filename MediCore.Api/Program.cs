@@ -81,6 +81,15 @@ try
     builder.Services.AddScoped<IRefertoService, RefertoService>();
     builder.Services.AddScoped<IFatturaService, FatturaService>();
 
+    var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("Frontend", policy =>
+            policy.WithOrigins(corsAllowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod());
+    });
+
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
@@ -120,6 +129,8 @@ try
     }
 
     app.UseHttpsRedirection();
+
+    app.UseCors("Frontend");
 
     app.UseAuthentication();
     app.UseAuthorization();
