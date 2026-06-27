@@ -1,0 +1,206 @@
+using MediCore.Api.Data;
+using MediCore.Api.Domain.Entities;
+using MediCore.Api.Domain.Enums;
+using MediCore.Api.Dtos.Prenotazioni;
+using MediCore.Api.Services;
+using MediCore.Api.Tests.TestUtils;
+using Microsoft.EntityFrameworkCore;
+
+namespace MediCore.Api.Tests.Services;
+
+public class PrenotazioneServiceTests
+{
+    private static async Task<(AppDbContext Db, Paziente Paziente, Slot Slot)> SetupAsync()
+    {
+        var db = AppDbContextFactory.Create();
+
+        var servizio = new Servizio { Nome = "Cardiologia", Descrizione = "Servizio di cardiologia" };
+        var prestazione = new Prestazione
+        {
+            ServizioId = servizio.ServizioId,
+            Nome = "Visita cardiologica",
+            Descrizione = "Prima visita",
+            DurataMinuti = 30
+        };
+        var medicoUser = new AppUser
+        {
+            UserName = "medico@medicore.local",
+            Email = "medico@medicore.local",
+            Nome = "Mario",
+            Cognome = "Rossi"
+        };
+        var medico = new Medico
+        {
+            UserId = medicoUser.Id,
+            Specializzazione = "Cardiologia",
+            ServizioId = servizio.ServizioId
+        };
+        var turno = new Turno
+        {
+            MedicoId = medico.MedicoId,
+            PrestazioneId = prestazione.PrestazioneId,
+            GiornoSettimana = GiornoSettimana.Lunedi,
+            OraInizio = new TimeOnly(9, 0),
+            OraFine = new TimeOnly(12, 0),
+            DurataSlotMin = 30
+        };
+        var slot = new Slot
+        {
+            TurnoId = turno.TurnoId,
+            DataOraInizio = DateTime.Now.Date.AddDays(7).AddHours(9),
+            DataOraFine = DateTime.Now.Date.AddDays(7).AddHours(9).AddMinutes(30),
+            Stato = StatoSlot.Libero
+        };
+        var pazienteUser = new AppUser
+        {
+            UserName = "paziente@medicore.local",
+            Email = "paziente@medicore.local",
+            Nome = "Luca",
+            Cognome = "Bianchi"
+        };
+        var paziente = new Paziente
+        {
+            UserId = pazienteUser.Id,
+            CodiceFiscale = "BNCLCU90A01H501A",
+            DataNascita = new DateOnly(1990, 1, 1),
+            Telefono = "3331234567"
+        };
+
+        db.Servizi.Add(servizio);
+        db.Prestazioni.Add(prestazione);
+        db.Users.AddRange(medicoUser, pazienteUser);
+        db.Medici.Add(medico);
+        db.Turni.Add(turno);
+        db.Slot.Add(slot);
+        db.Pazienti.Add(paziente);
+        await db.SaveChangesAsync();
+
+        return (db, paziente, slot);
+    }
+
+    [Fact]
+    public async Task CreateAsync_paziente_su_slot_libero_restituisce_Ok_e_occupa_lo_slot()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
+
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(prenotazione);
+        Assert.Equal(paziente.PazienteId, prenotazione!.PazienteId);
+        Assert.Equal(StatoSlot.Prenotato, (await db.Slot.FindAsync(slot.SlotId))!.Stato);
+    }
+
+    [Fact]
+    public async Task CreateAsync_admin_per_altro_paziente_restituisce_Ok()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Privato, PazienteId = paziente.PazienteId };
+
+        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", isAdmin: true);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.Equal(paziente.PazienteId, prenotazione!.PazienteId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_admin_senza_PazienteId_restituisce_DatiNonValidi()
+    {
+        var (db, _, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
+
+        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", isAdmin: true);
+
+        Assert.Equal(EsitoOperazione.DatiNonValidi, esito);
+        Assert.Null(prenotazione);
+    }
+
+    [Fact]
+    public async Task CreateAsync_con_slot_inesistente_restituisce_RiferimentoNonValido()
+    {
+        var (db, paziente, _) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var request = new PrenotazioneRequest { SlotId = Guid.NewGuid(), Regime = Regime.Ssn };
+
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.RiferimentoNonValido, esito);
+        Assert.Null(prenotazione);
+    }
+
+    [Fact]
+    public async Task CreateAsync_con_slot_gia_occupato_restituisce_Conflitto()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        slot.Stato = StatoSlot.Prenotato;
+        await db.SaveChangesAsync();
+        var service = new PrenotazioneService(db);
+        var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
+
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Conflitto, esito);
+        Assert.Null(prenotazione);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_paziente_diverso_dal_proprietario_restituisce_NonAutorizzato()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+
+        var (esito, prenotazione) = await service.GetByIdAsync(creata!.Id, "altro-utente", isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.NonAutorizzato, esito);
+        Assert.Null(prenotazione);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_admin_puo_leggere_qualunque_prenotazione()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+
+        var (esito, prenotazione) = await service.GetByIdAsync(creata!.Id, "admin-user-id", isAdmin: true);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(prenotazione);
+    }
+
+    [Fact]
+    public async Task AnnullaAsync_libera_lo_slot_e_imposta_lo_stato_Annullata()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+
+        var esito = await service.AnnullaAsync(creata!.Id, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.Equal(StatoSlot.Libero, (await db.Slot.FindAsync(slot.SlotId))!.Stato);
+        Assert.Equal(StatoPrenotazione.Annullata, (await db.Prenotazioni.FindAsync(creata.Id))!.Stato);
+    }
+
+    [Fact]
+    public async Task AnnullaAsync_gia_annullata_restituisce_Conflitto()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+        await service.AnnullaAsync(creata!.Id, paziente.UserId, isAdmin: false);
+
+        var esito = await service.AnnullaAsync(creata.Id, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Conflitto, esito);
+    }
+}

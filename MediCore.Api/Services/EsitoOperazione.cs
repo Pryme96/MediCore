@@ -7,5 +7,6 @@ public enum EsitoOperazione
     NonTrovato,
     RiferimentoNonValido,
     Conflitto,
-    DatiNonValidi
+    DatiNonValidi,
+    NonAutorizzato
 }

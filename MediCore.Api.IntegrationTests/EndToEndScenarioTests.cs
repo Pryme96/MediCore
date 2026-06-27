@@ -292,5 +292,58 @@ public class EndToEndScenarioTests
         // 12bis. Prestazione inesistente -> 404.
         var getSlotPrestazioneInesistenteResponse = await client.GetAsync($"slot/prestazione/{Guid.NewGuid()}");
         Assert.Equal(HttpStatusCode.NotFound, getSlotPrestazioneInesistenteResponse.StatusCode);
+
+        // 13. Il paziente prenota il primo slot disponibile.
+        var slotPrenotato = slotDisponibili![0];
+        var prenotazioneResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotPrenotato.Id,
+            Regime = Regime.Ssn
+        });
+        Assert.Equal(HttpStatusCode.Created, prenotazioneResponse.StatusCode);
+        var prenotazione = await prenotazioneResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
+        Assert.NotNull(prenotazione);
+        Assert.Equal(StatoPrenotazione.Confermata, prenotazione!.Stato);
+
+        // 13bis. Lo stesso slot non è più prenotabile: prenotazione duplicata -> 409.
+        var prenotazioneDuplicataResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotPrenotato.Id,
+            Regime = Regime.Ssn
+        });
+        Assert.Equal(HttpStatusCode.Conflict, prenotazioneDuplicataResponse.StatusCode);
+
+        // 14. GET /prenotazioni/mie include la prenotazione appena creata.
+        var getMieResponse = await client.GetAsync("prenotazioni/mie");
+        Assert.Equal(HttpStatusCode.OK, getMieResponse.StatusCode);
+        var mie = await getMieResponse.Content.ReadFromJsonAsync<List<PrenotazioneResponse>>();
+        Assert.Contains(mie!, p => p.Id == prenotazione.Id);
+
+        // 14bis. GET /prenotazioni/{id} da parte dell'amministratore (non proprietario) -> 200.
+        client.UseToken(tokenAdmin);
+        var getByIdComeAdminResponse = await client.GetAsync($"prenotazioni/{prenotazione.Id}");
+        Assert.Equal(HttpStatusCode.OK, getByIdComeAdminResponse.StatusCode);
+        client.UseToken(tokenPaziente);
+
+        // 15. Annullamento da parte del paziente proprietario -> 204.
+        var annullaResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazione.Id}/annulla", null);
+        Assert.Equal(HttpStatusCode.NoContent, annullaResponse.StatusCode);
+
+        // 15bis. Annullare due volte la stessa prenotazione -> 409.
+        var annullaDuplicataResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazione.Id}/annulla", null);
+        Assert.Equal(HttpStatusCode.Conflict, annullaDuplicataResponse.StatusCode);
+
+        // 15ter. Lo slot annullato torna disponibile per una nuova prenotazione.
+        var getSlotDopoAnnullamentoResponse = await client.GetAsync($"slot/prestazione/{prestazione!.Id}");
+        var slotDopoAnnullamento = await getSlotDopoAnnullamentoResponse.Content.ReadFromJsonAsync<List<SlotResponse>>();
+        Assert.Contains(slotDopoAnnullamento!, s => s.Id == slotPrenotato.Id);
+
+        // 16. SlotId inesistente -> 400.
+        var prenotazioneSlotInesistenteResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = Guid.NewGuid(),
+            Regime = Regime.Ssn
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, prenotazioneSlotInesistenteResponse.StatusCode);
     }
 }

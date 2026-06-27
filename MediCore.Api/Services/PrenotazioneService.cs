@@ -1,0 +1,145 @@
+using MediCore.Api.Data;
+using MediCore.Api.Domain.Entities;
+using MediCore.Api.Domain.Enums;
+using MediCore.Api.Dtos.Prenotazioni;
+using Microsoft.EntityFrameworkCore;
+
+namespace MediCore.Api.Services;
+
+public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
+{
+    public async Task<(EsitoOperazione Esito, PrenotazioneResponse? Prenotazione)> CreateAsync(PrenotazioneRequest request, string userId, bool isAdmin)
+    {
+        Guid pazienteId;
+        if (isAdmin)
+        {
+            if (request.PazienteId is null)
+                return (EsitoOperazione.DatiNonValidi, null);
+
+            var pazienteEsiste = await db.Pazienti.AnyAsync(p => p.PazienteId == request.PazienteId);
+            if (!pazienteEsiste)
+                return (EsitoOperazione.RiferimentoNonValido, null);
+
+            pazienteId = request.PazienteId.Value;
+        }
+        else
+        {
+            var paziente = await db.Pazienti.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (paziente is null)
+                return (EsitoOperazione.RiferimentoNonValido, null);
+
+            pazienteId = paziente.PazienteId;
+        }
+
+        var slot = await db.Slot
+            .Include(s => s.Turno).ThenInclude(t => t.Medico).ThenInclude(m => m.User)
+            .Include(s => s.Turno).ThenInclude(t => t.Prestazione)
+            .FirstOrDefaultAsync(s => s.SlotId == request.SlotId);
+        if (slot is null)
+            return (EsitoOperazione.RiferimentoNonValido, null);
+
+        if (slot.Stato != StatoSlot.Libero)
+            return (EsitoOperazione.Conflitto, null);
+
+        slot.Stato = StatoSlot.Prenotato;
+
+        var prenotazione = new Prenotazione
+        {
+            PazienteId = pazienteId,
+            SlotId = slot.SlotId,
+            Regime = request.Regime,
+            Note = request.Note
+        };
+        db.Prenotazioni.Add(prenotazione);
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return (EsitoOperazione.Conflitto, null);
+        }
+
+        var pazienteCreato = await db.Pazienti.Include(p => p.User).FirstAsync(p => p.PazienteId == pazienteId);
+        return (EsitoOperazione.Ok, ToResponse(prenotazione, slot, pazienteCreato));
+    }
+
+    public async Task<(EsitoOperazione Esito, PrenotazioneResponse? Prenotazione)> GetByIdAsync(Guid id, string userId, bool isAdmin)
+    {
+        var prenotazione = await db.Prenotazioni
+            .Include(p => p.Paziente).ThenInclude(pz => pz.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Prestazione)
+            .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
+        if (prenotazione is null)
+            return (EsitoOperazione.NonTrovato, null);
+
+        if (!isAdmin && prenotazione.Paziente.UserId != userId)
+            return (EsitoOperazione.NonAutorizzato, null);
+
+        return (EsitoOperazione.Ok, ToResponse(prenotazione, prenotazione.Slot, prenotazione.Paziente));
+    }
+
+    public async Task<IReadOnlyList<PrenotazioneResponse>> GetMieAsync(string userId)
+    {
+        var paziente = await db.Pazienti.FirstOrDefaultAsync(p => p.UserId == userId);
+        if (paziente is null)
+            return [];
+
+        var prenotazioni = await db.Prenotazioni.AsNoTracking()
+            .Include(p => p.Paziente).ThenInclude(pz => pz.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Prestazione)
+            .Where(p => p.PazienteId == paziente.PazienteId)
+            .OrderByDescending(p => p.Slot.DataOraInizio)
+            .ToListAsync();
+
+        return prenotazioni.Select(p => ToResponse(p, p.Slot, p.Paziente)).ToList();
+    }
+
+    public async Task<EsitoOperazione> AnnullaAsync(Guid id, string userId, bool isAdmin)
+    {
+        var prenotazione = await db.Prenotazioni
+            .Include(p => p.Paziente)
+            .Include(p => p.Slot)
+            .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
+        if (prenotazione is null)
+            return EsitoOperazione.NonTrovato;
+
+        if (!isAdmin && prenotazione.Paziente.UserId != userId)
+            return EsitoOperazione.NonAutorizzato;
+
+        if (prenotazione.Stato != StatoPrenotazione.Confermata)
+            return EsitoOperazione.Conflitto;
+
+        prenotazione.Stato = StatoPrenotazione.Annullata;
+        prenotazione.Slot.Stato = StatoSlot.Libero;
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return EsitoOperazione.Conflitto;
+        }
+
+        return EsitoOperazione.Ok;
+    }
+
+    private static PrenotazioneResponse ToResponse(Prenotazione prenotazione, Slot slot, Paziente paziente) => new()
+    {
+        Id = prenotazione.PrenotazioneId,
+        PazienteId = paziente.PazienteId,
+        PazienteNomeCompleto = $"{paziente.User.Nome} {paziente.User.Cognome}",
+        SlotId = slot.SlotId,
+        MedicoNomeCompleto = $"{slot.Turno.Medico.User.Nome} {slot.Turno.Medico.User.Cognome}",
+        PrestazioneNome = slot.Turno.Prestazione.Nome,
+        DataOraInizio = slot.DataOraInizio,
+        DataOraFine = slot.DataOraFine,
+        Regime = prenotazione.Regime,
+        Stato = prenotazione.Stato,
+        Note = prenotazione.Note
+    };
+}

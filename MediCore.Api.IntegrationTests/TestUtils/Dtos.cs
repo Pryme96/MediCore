@@ -51,3 +51,24 @@ public record SlotResponse(
     string MedicoNomeCompleto,
     DateTime DataOraInizio,
     DateTime DataOraFine);
+
+public enum StatoPrenotazione
+{
+    Confermata = 1,
+    Annullata = 2,
+    Completata = 3,
+    NonPresentato = 4
+}
+
+public record PrenotazioneResponse(
+    Guid Id,
+    Guid PazienteId,
+    string PazienteNomeCompleto,
+    Guid SlotId,
+    string MedicoNomeCompleto,
+    string PrestazioneNome,
+    DateTime DataOraInizio,
+    DateTime DataOraFine,
+    Regime Regime,
+    StatoPrenotazione Stato,
+    string? Note);
