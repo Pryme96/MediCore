@@ -79,6 +79,7 @@ try
     builder.Services.AddScoped<IPrescrizioneService, PrescrizioneService>();
     builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
     builder.Services.AddScoped<IRefertoService, RefertoService>();
+    builder.Services.AddScoped<IFatturaService, FatturaService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

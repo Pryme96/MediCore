@@ -54,6 +54,18 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
             _ => BadRequest()
         };
 
+    [HttpPut("{id:guid}/completa")]
+    public async Task<IActionResult> Completa(Guid id) =>
+        await prenotazioneService.CompletaAsync(id, UserId, IsAdmin) switch
+        {
+            EsitoOperazione.Ok => NoContent(),
+            EsitoOperazione.NonTrovato => NotFound(),
+            EsitoOperazione.NonAutorizzato => Forbid(),
+            EsitoOperazione.Conflitto => Conflict("La prenotazione non è completabile."),
+            EsitoOperazione.RiferimentoNonValido => BadRequest("Nessuna tariffa configurata per questa prestazione e questo regime."),
+            _ => BadRequest()
+        };
+
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(AppRoles.Amministratore);
 }

@@ -480,5 +480,55 @@ public class EndToEndScenarioTests
         var refertoAggiornato = await secondoUploadResponse.Content.ReadFromJsonAsync<RefertoResponse>();
         Assert.Equal(referto.Id, refertoAggiornato!.Id);
         Assert.Equal("Esito corretto", refertoAggiornato.Contenuto);
+
+        // 29. Il Paziente prenota un secondo slot, con Regime Privato (tariffa creata al passo 6ter).
+        client.UseToken(tokenPaziente);
+        var secondoSlot = slotDisponibili[1];
+        var secondaPrenotazioneResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = secondoSlot.Id,
+            Regime = Regime.Privato
+        });
+        Assert.Equal(HttpStatusCode.Created, secondaPrenotazioneResponse.StatusCode);
+        var secondaPrenotazione = await secondaPrenotazioneResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
+        Assert.NotNull(secondaPrenotazione);
+
+        // 30. Il Paziente NON può completare la propria Prenotazione (solo Medico titolare o Amministratore).
+        var completaComePazienteResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione!.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.Forbidden, completaComePazienteResponse.StatusCode);
+
+        // 31. Il Medico titolare completa la Prenotazione: viene generata la Fattura dalla Tariffa Privato/80.
+        client.UseToken(tokenMedico);
+        var completaResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.NoContent, completaResponse.StatusCode);
+
+        // 31bis. Completare due volte la stessa Prenotazione -> 409.
+        var completaDuplicataResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.Conflict, completaDuplicataResponse.StatusCode);
+
+        // 32. GET /fatture/mie come Paziente include la fattura generata con l'importo della Tariffa.
+        client.UseToken(tokenPaziente);
+        var getMieFattureResponse = await client.GetAsync("fatture/mie");
+        Assert.Equal(HttpStatusCode.OK, getMieFattureResponse.StatusCode);
+        var mieFatture = await getMieFattureResponse.Content.ReadFromJsonAsync<List<FatturaResponse>>();
+        var fatturaGenerata = mieFatture!.Single(f => f.PrenotazioneId == secondaPrenotazione.Id);
+        Assert.Equal(80, fatturaGenerata.Importo);
+
+        // 33. GET /fatture/{id} come Medico titolare -> 200.
+        client.UseToken(tokenMedico);
+        var getFatturaComeMedicoResponse = await client.GetAsync($"fatture/{fatturaGenerata.Id}");
+        Assert.Equal(HttpStatusCode.OK, getFatturaComeMedicoResponse.StatusCode);
+
+        // 34. Prenotazione con Regime senza Tariffa configurata (Assicurativo): il completamento -> 400.
+        client.UseToken(tokenPaziente);
+        var terzaPrenotazioneResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotDisponibili[2].Id,
+            Regime = Regime.Assicurativo
+        });
+        var terzaPrenotazione = await terzaPrenotazioneResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
+        client.UseToken(tokenMedico);
+        var completaSenzaTariffaResponse = await client.PutAsync<object?>($"prenotazioni/{terzaPrenotazione!.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.BadRequest, completaSenzaTariffaResponse.StatusCode);
     }
 }

@@ -128,6 +128,41 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         return EsitoOperazione.Ok;
     }
 
+    public async Task<EsitoOperazione> CompletaAsync(Guid id, string userId, bool isAdmin)
+    {
+        var prenotazione = await db.Prenotazioni
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico)
+            .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
+        if (prenotazione is null)
+            return EsitoOperazione.NonTrovato;
+
+        if (!isAdmin && prenotazione.Slot.Turno.Medico.UserId != userId)
+            return EsitoOperazione.NonAutorizzato;
+
+        if (prenotazione.Stato != StatoPrenotazione.Confermata)
+            return EsitoOperazione.Conflitto;
+
+        var tariffa = await db.Tariffe.FirstOrDefaultAsync(t =>
+            t.PrestazioneId == prenotazione.Slot.Turno.PrestazioneId && t.Regime == prenotazione.Regime);
+        if (tariffa is null)
+            return EsitoOperazione.RiferimentoNonValido;
+
+        prenotazione.Stato = StatoPrenotazione.Completata;
+
+        db.Fatture.Add(new Fattura
+        {
+            PrenotazioneId = prenotazione.PrenotazioneId,
+            PazienteId = prenotazione.PazienteId,
+            Importo = tariffa.Prezzo,
+            Regime = prenotazione.Regime,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now)
+        });
+
+        await db.SaveChangesAsync();
+
+        return EsitoOperazione.Ok;
+    }
+
     private static PrenotazioneResponse ToResponse(Prenotazione prenotazione, Slot slot, Paziente paziente) => new()
     {
         Id = prenotazione.PrenotazioneId,

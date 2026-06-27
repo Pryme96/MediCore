@@ -73,6 +73,24 @@ public record PrenotazioneResponse(
     StatoPrenotazione Stato,
     string? Note);
 
+public enum StatoFattura
+{
+    Emessa = 1,
+    Pagata = 2,
+    Scaduta = 3,
+    Annullata = 4
+}
+
+public record FatturaResponse(
+    Guid Id,
+    Guid PrenotazioneId,
+    Guid PazienteId,
+    string PazienteNomeCompleto,
+    decimal Importo,
+    Regime Regime,
+    DateOnly DataEmissione,
+    StatoFattura Stato);
+
 public record RefertoResponse(
     Guid Id,
     Guid PrenotazioneId,
