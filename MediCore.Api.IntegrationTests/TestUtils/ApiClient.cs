@@ -35,6 +35,21 @@ public class ApiClient
     public Task<HttpResponseMessage> PostAsync<T>(string url, T body) => _http.PostAsJsonAsync(url, body);
 
     public Task<HttpResponseMessage> PutAsync<T>(string url, T body) => _http.PutAsJsonAsync(url, body);
+
+    public async Task<HttpResponseMessage> PostFileAsync(string url, Guid prenotazioneId, byte[] fileContent, string fileName, string contentType, string? contenuto = null)
+    {
+        using var form = new MultipartFormDataContent
+        {
+            { new StringContent(prenotazioneId.ToString()), "PrenotazioneId" }
+        };
+        var fileParte = new ByteArrayContent(fileContent);
+        fileParte.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+        form.Add(fileParte, "File", fileName);
+        if (contenuto is not null)
+            form.Add(new StringContent(contenuto), "Contenuto");
+
+        return await _http.PostAsync(url, form);
+    }
 }
 
 public record AuthResponse(string Token, DateTime ExpiresAtUtc, string Email, IReadOnlyList<string> Ruoli);

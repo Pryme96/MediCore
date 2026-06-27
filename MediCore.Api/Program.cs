@@ -3,6 +3,7 @@ using MediCore.Api.Data;
 using MediCore.Api.Domain.Entities;
 using MediCore.Api.Infrastructure;
 using MediCore.Api.Services;
+using MediCore.Api.Services.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,8 @@ try
     builder.Services.AddScoped<ISlotService, SlotService>();
     builder.Services.AddScoped<IPrenotazioneService, PrenotazioneService>();
     builder.Services.AddScoped<IPrescrizioneService, PrescrizioneService>();
+    builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+    builder.Services.AddScoped<IRefertoService, RefertoService>();
 
     builder.Services.AddControllers();
     builder.Services.AddEndpointsApiExplorer();

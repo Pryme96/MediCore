@@ -73,6 +73,12 @@ public record PrenotazioneResponse(
     StatoPrenotazione Stato,
     string? Note);
 
+public record RefertoResponse(
+    Guid Id,
+    Guid PrenotazioneId,
+    DateTime DataEmissione,
+    string? Contenuto);
+
 public record PrescrizioneResponse(
     Guid Id,
     Guid PazienteId,

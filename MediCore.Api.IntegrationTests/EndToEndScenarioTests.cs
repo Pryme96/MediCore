@@ -414,5 +414,71 @@ public class EndToEndScenarioTests
         // 22. GET /prescrizioni/{id} come Paziente proprietario -> 200.
         var getPrescrizioneByIdResponse = await client.GetAsync($"prescrizioni/{prescrizione.Id}");
         Assert.Equal(HttpStatusCode.OK, getPrescrizioneByIdResponse.StatusCode);
+
+        // 23. Il Paziente NON può caricare un Referto (solo Medico).
+        var pdfFinto = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4 contenuto finto");
+        var uploadRefertoComePazienteResponse = await client.PostFileAsync(
+            "referti", prenotazione.Id, pdfFinto, "referto.pdf", "application/pdf");
+        Assert.Equal(HttpStatusCode.Forbidden, uploadRefertoComePazienteResponse.StatusCode);
+
+        // 24. Il Medico carica un Referto PDF sulla propria Prenotazione.
+        client.UseToken(tokenMedico);
+        var uploadRefertoResponse = await client.PostFileAsync(
+            "referti", prenotazione.Id, pdfFinto, "referto.pdf", "application/pdf", "Esito nella norma");
+        Assert.Equal(HttpStatusCode.Created, uploadRefertoResponse.StatusCode);
+        var referto = await uploadRefertoResponse.Content.ReadFromJsonAsync<RefertoResponse>();
+        Assert.NotNull(referto);
+
+        // 24bis. File non PDF -> 400.
+        var uploadRefertoNonPdfResponse = await client.PostFileAsync(
+            "referti", prenotazione.Id, pdfFinto, "referto.png", "image/png");
+        Assert.Equal(HttpStatusCode.BadRequest, uploadRefertoNonPdfResponse.StatusCode);
+
+        // 24ter. Prenotazione inesistente -> 404.
+        var uploadRefertoPrenotazioneInesistenteResponse = await client.PostFileAsync(
+            "referti", Guid.NewGuid(), pdfFinto, "referto.pdf", "application/pdf");
+        Assert.Equal(HttpStatusCode.NotFound, uploadRefertoPrenotazioneInesistenteResponse.StatusCode);
+
+        // 25. GET /referti/{id} come Medico autore -> 200.
+        var getRefertoByIdResponse = await client.GetAsync($"referti/{referto!.Id}");
+        Assert.Equal(HttpStatusCode.OK, getRefertoByIdResponse.StatusCode);
+
+        // 26. GET /referti/prenotazione/{id} come Paziente proprietario -> 200.
+        client.UseToken(tokenPaziente);
+        var getRefertoByPrenotazioneResponse = await client.GetAsync($"referti/prenotazione/{prenotazione.Id}");
+        Assert.Equal(HttpStatusCode.OK, getRefertoByPrenotazioneResponse.StatusCode);
+
+        // 27. GET /referti/{id}/file come Paziente proprietario -> 200, contenuto PDF scaricato.
+        var downloadRefertoResponse = await client.GetAsync($"referti/{referto.Id}/file");
+        Assert.Equal(HttpStatusCode.OK, downloadRefertoResponse.StatusCode);
+        var fileScaricato = await downloadRefertoResponse.Content.ReadAsByteArrayAsync();
+        Assert.Equal(pdfFinto, fileScaricato);
+
+        // 27bis. Un secondo Medico estraneo alla prenotazione non può scaricare il file.
+        client.UseToken(tokenAdmin);
+        var creaAltroMedicoResponse = await client.PostAsync("medici", new
+        {
+            Email = $"medico.estraneo.{suffisso}@medicore.local",
+            Nome = "Estraneo",
+            Cognome = "AlReferto",
+            Specializzazione = "Ortopedia",
+            ServizioId = servizio.Id
+        });
+        var altroMedicoCreato = await creaAltroMedicoResponse.Content.ReadFromJsonAsync<MedicoCreatoResponse>();
+        var tokenMedicoEstraneo = await client.LoginAsync(altroMedicoCreato!.Medico.Email, altroMedicoCreato.PasswordGenerata);
+        client.UseToken(tokenMedicoEstraneo);
+        var downloadRefertoComeEstraneoResponse = await client.GetAsync($"referti/{referto.Id}/file");
+        Assert.Equal(HttpStatusCode.Forbidden, downloadRefertoComeEstraneoResponse.StatusCode);
+
+        // 28. Un secondo upload sulla stessa Prenotazione sovrascrive il referto precedente
+        // (stesso Id, nuovo contenuto): qui verifichiamo solo che resti un'unica risorsa.
+        client.UseToken(tokenMedico);
+        var pdfAggiornato = System.Text.Encoding.UTF8.GetBytes("%PDF-1.4 versione corretta");
+        var secondoUploadResponse = await client.PostFileAsync(
+            "referti", prenotazione.Id, pdfAggiornato, "referto-v2.pdf", "application/pdf", "Esito corretto");
+        Assert.Equal(HttpStatusCode.Created, secondoUploadResponse.StatusCode);
+        var refertoAggiornato = await secondoUploadResponse.Content.ReadFromJsonAsync<RefertoResponse>();
+        Assert.Equal(referto.Id, refertoAggiornato!.Id);
+        Assert.Equal("Esito corretto", refertoAggiornato.Contenuto);
     }
 }

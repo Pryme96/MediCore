@@ -21,3 +21,6 @@ dist/
 ## Log (Serilog)
 logs/
 *.log
+
+## File storage locale (Referti caricati in dev/test)
+App_Data/
