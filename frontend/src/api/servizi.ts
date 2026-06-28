@@ -18,6 +18,11 @@ export const getPrestazioniPerServizio = async (servizioId: string): Promise<Pre
   return response.data;
 };
 
+export const getPrestazioni = async (): Promise<Prestazione[]> => {
+  const response = await apiClient.get<Prestazione[]>("/prestazioni");
+  return response.data;
+};
+
 export const createServizio = async (data: ServizioInput): Promise<Servizio> => {
   const response = await apiClient.post<Servizio>("/servizi", data);
   return response.data;

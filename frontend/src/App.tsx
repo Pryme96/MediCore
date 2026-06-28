@@ -9,6 +9,7 @@ import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { Servizi } from "./pages/Servizi";
 import { GestioneServizi } from "./pages/GestioneServizi";
 import { Medici } from "./pages/Medici";
+import { Turni } from "./pages/Turni";
 
 function App() {
   return (
@@ -39,7 +40,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="turni" element={<PlaceholderPage titolo="Turni" />} />
+            <Route
+              path="turni"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Amministratore", "Medico"]}>
+                  <Turni />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="gestione-servizi"
               element={
