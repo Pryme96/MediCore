@@ -13,5 +13,4 @@ public class Slot : AuditableEntity
     public StatoSlot Stato { get; set; } = StatoSlot.Libero;
 
     public Turno Turno { get; set; } = null!;
-    public Prenotazione? Prenotazione { get; set; }
 }

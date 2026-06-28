@@ -357,6 +357,15 @@ public class EndToEndScenarioTests
         var slotDopoAnnullamento = await getSlotDopoAnnullamentoResponse.Content.ReadFromJsonAsync<List<SlotResponse>>();
         Assert.Contains(slotDopoAnnullamento!, s => s.Id == slotPrenotato.Id);
 
+        // 15quater. Lo slot liberato può essere effettivamente riprenotato (regressione: prima
+        // la riga annullata residua violava l'indice unico su SlotId e l'API restituiva 500).
+        var riprenotaSlotResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotPrenotato.Id,
+            Regime = Regime.Ssn
+        });
+        Assert.Equal(HttpStatusCode.Created, riprenotaSlotResponse.StatusCode);
+
         // 16. SlotId inesistente -> 400.
         var prenotazioneSlotInesistenteResponse = await client.PostAsync("prenotazioni", new
         {

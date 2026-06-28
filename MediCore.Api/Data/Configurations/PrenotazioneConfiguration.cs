@@ -12,11 +12,17 @@ public class PrenotazioneConfiguration : IEntityTypeConfiguration<Prenotazione>
 
         builder.Property(p => p.Note).HasMaxLength(500);
 
-        // Relazione 1..1 con lo slot: genera l'indice unico su SlotId.
+        // Relazione con lo slot: uno slot può avere più prenotazioni nel tempo (storico),
+        // ma una sola "attiva" alla volta. L'annullamento libera lo slot lasciando la riga
+        // storica, quindi l'unicità è filtrata sulle prenotazioni non annullate (Stato <> 2).
         builder.HasOne(p => p.Slot)
-            .WithOne(s => s.Prenotazione)
-            .HasForeignKey<Prenotazione>(p => p.SlotId)
+            .WithMany()
+            .HasForeignKey(p => p.SlotId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasIndex(p => p.SlotId)
+            .IsUnique()
+            .HasFilter("\"Stato\" <> 2");
 
         builder.HasOne(p => p.Paziente)
             .WithMany(pz => pz.Prenotazioni)

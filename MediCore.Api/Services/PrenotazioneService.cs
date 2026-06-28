@@ -56,8 +56,10 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         {
             await db.SaveChangesAsync();
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateException)
         {
+            // Copre sia la concorrenza sul token di Slot.Stato sia la violazione dell'indice
+            // unico filtrato (un'altra prenotazione attiva è arrivata prima su questo slot).
             return (EsitoOperazione.Conflitto, null);
         }
 

@@ -148,6 +148,26 @@ public class PrenotazioneServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_su_slot_liberato_dopo_annullamento_restituisce_Ok()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, prima) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+        await service.AnnullaAsync(prima!.Id, paziente.UserId, isAdmin: false);
+
+        // Lo slot è di nuovo libero: una nuova prenotazione sullo stesso slot deve essere possibile
+        // (la riga annullata resta come storico, l'unicità è filtrata sulle non annullate).
+        var (esito, seconda) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Privato }, paziente.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(seconda);
+        Assert.NotEqual(prima.Id, seconda!.Id);
+        Assert.Equal(StatoSlot.Prenotato, (await db.Slot.FindAsync(slot.SlotId))!.Stato);
+    }
+
+    [Fact]
     public async Task GetByIdAsync_paziente_diverso_dal_proprietario_restituisce_NonAutorizzato()
     {
         var (db, paziente, slot) = await SetupAsync();
