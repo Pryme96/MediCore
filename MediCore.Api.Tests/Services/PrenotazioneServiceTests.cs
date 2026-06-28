@@ -85,7 +85,7 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
 
-        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, puoPrenotarePerAltri: false);
 
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.NotNull(prenotazione);
@@ -100,7 +100,7 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Privato, PazienteId = paziente.PazienteId };
 
-        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", isAdmin: true);
+        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", puoPrenotarePerAltri: true);
 
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.Equal(paziente.PazienteId, prenotazione!.PazienteId);
@@ -113,7 +113,7 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
 
-        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", isAdmin: true);
+        var (esito, prenotazione) = await service.CreateAsync(request, "admin-user-id", puoPrenotarePerAltri: true);
 
         Assert.Equal(EsitoOperazione.DatiNonValidi, esito);
         Assert.Null(prenotazione);
@@ -126,7 +126,7 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var request = new PrenotazioneRequest { SlotId = Guid.NewGuid(), Regime = Regime.Ssn };
 
-        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, puoPrenotarePerAltri: false);
 
         Assert.Equal(EsitoOperazione.RiferimentoNonValido, esito);
         Assert.Null(prenotazione);
@@ -141,7 +141,7 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var request = new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn };
 
-        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, isAdmin: false);
+        var (esito, prenotazione) = await service.CreateAsync(request, paziente.UserId, puoPrenotarePerAltri: false);
 
         Assert.Equal(EsitoOperazione.Conflitto, esito);
         Assert.Null(prenotazione);
@@ -153,13 +153,13 @@ public class PrenotazioneServiceTests
         var (db, paziente, slot) = await SetupAsync();
         var service = new PrenotazioneService(db);
         var (_, prima) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
         await service.AnnullaAsync(prima!.Id, paziente.UserId, isAdmin: false);
 
         // Lo slot è di nuovo libero: una nuova prenotazione sullo stesso slot deve essere possibile
         // (la riga annullata resta come storico, l'unicità è filtrata sulle non annullate).
         var (esito, seconda) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Privato }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Privato }, paziente.UserId, puoPrenotarePerAltri: false);
 
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.NotNull(seconda);
@@ -173,7 +173,7 @@ public class PrenotazioneServiceTests
         var (db, paziente, slot) = await SetupAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var (esito, prenotazione) = await service.GetByIdAsync(creata!.Id, "altro-utente", isAdmin: false);
 
@@ -187,7 +187,7 @@ public class PrenotazioneServiceTests
         var (db, paziente, slot) = await SetupAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var (esito, prenotazione) = await service.GetByIdAsync(creata!.Id, "admin-user-id", isAdmin: true);
 
@@ -196,12 +196,71 @@ public class PrenotazioneServiceTests
     }
 
     [Fact]
+    public async Task GetByIdAsync_medico_titolare_del_turno_puo_leggere()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var turno = await db.Turni.SingleAsync(t => t.TurnoId == slot.TurnoId);
+        var medico = await db.Medici.SingleAsync(m => m.MedicoId == turno.MedicoId);
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var (esito, prenotazione) = await service.GetByIdAsync(creata!.Id, medico.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(prenotazione);
+    }
+
+    [Fact]
+    public async Task AnnullaAsync_dal_medico_titolare_libera_lo_slot()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var turno = await db.Turni.SingleAsync(t => t.TurnoId == slot.TurnoId);
+        var medico = await db.Medici.SingleAsync(m => m.MedicoId == turno.MedicoId);
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var esito = await service.AnnullaAsync(creata!.Id, medico.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.Equal(StatoSlot.Libero, (await db.Slot.FindAsync(slot.SlotId))!.Stato);
+    }
+
+    [Fact]
+    public async Task GetAgendaMedicoAsync_restituisce_le_prenotazioni_sui_propri_turni()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var turno = await db.Turni.SingleAsync(t => t.TurnoId == slot.TurnoId);
+        var medico = await db.Medici.SingleAsync(m => m.MedicoId == turno.MedicoId);
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var agenda = await service.GetAgendaMedicoAsync(medico.UserId);
+
+        Assert.Single(agenda);
+        Assert.Equal(creata!.Id, agenda[0].Id);
+    }
+
+    [Fact]
+    public async Task GetAgendaMedicoAsync_per_utente_non_medico_restituisce_lista_vuota()
+    {
+        var (db, _, _) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+
+        var agenda = await service.GetAgendaMedicoAsync("utente-non-medico");
+
+        Assert.Empty(agenda);
+    }
+
+    [Fact]
     public async Task AnnullaAsync_libera_lo_slot_e_imposta_lo_stato_Annullata()
     {
         var (db, paziente, slot) = await SetupAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var esito = await service.AnnullaAsync(creata!.Id, paziente.UserId, isAdmin: false);
 
@@ -216,7 +275,7 @@ public class PrenotazioneServiceTests
         var (db, paziente, slot) = await SetupAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
         await service.AnnullaAsync(creata!.Id, paziente.UserId, isAdmin: false);
 
         var esito = await service.AnnullaAsync(creata.Id, paziente.UserId, isAdmin: false);
@@ -242,7 +301,7 @@ public class PrenotazioneServiceTests
         var (db, medico, paziente, slot) = await SetupConTariffaAsync(prezzo: 80);
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var esito = await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
 
@@ -259,7 +318,7 @@ public class PrenotazioneServiceTests
         var (db, _, paziente, slot) = await SetupConTariffaAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var esito = await service.CompletaAsync(creata!.Id, "medico-estraneo", isAdmin: false);
 
@@ -274,7 +333,7 @@ public class PrenotazioneServiceTests
         var medico = await db.Medici.SingleAsync(m => m.MedicoId == turno.MedicoId);
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
         var esito = await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
 
@@ -287,7 +346,7 @@ public class PrenotazioneServiceTests
         var (db, medico, paziente, slot) = await SetupConTariffaAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
-            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, isAdmin: false);
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
         await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
 
         var esito = await service.CompletaAsync(creata.Id, medico.UserId, isAdmin: false);

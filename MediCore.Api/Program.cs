@@ -74,6 +74,7 @@ try
     builder.Services.AddScoped<ITariffaService, TariffaService>();
     builder.Services.AddScoped<ITurnoService, TurnoService>();
     builder.Services.AddScoped<IMedicoService, MedicoService>();
+    builder.Services.AddScoped<IPazienteService, PazienteService>();
     builder.Services.AddScoped<ISlotService, SlotService>();
     builder.Services.AddScoped<IPrenotazioneService, PrenotazioneService>();
     builder.Services.AddScoped<IPrescrizioneService, PrescrizioneService>();

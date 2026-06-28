@@ -15,7 +15,7 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
     [HttpPost]
     public async Task<ActionResult<PrenotazioneResponse>> Create(PrenotazioneRequest request)
     {
-        var (esito, prenotazione) = await prenotazioneService.CreateAsync(request, UserId, IsAdmin);
+        var (esito, prenotazione) = await prenotazioneService.CreateAsync(request, UserId, IsOperatore);
         return esito switch
         {
             EsitoOperazione.Ok => CreatedAtAction(nameof(GetById), new { id = prenotazione!.Id }, prenotazione),
@@ -43,6 +43,11 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
     public async Task<ActionResult<IReadOnlyList<PrenotazioneResponse>>> GetMie() =>
         Ok(await prenotazioneService.GetMieAsync(UserId));
 
+    [HttpGet("agenda")]
+    [Authorize(Roles = AppRoles.Medico)]
+    public async Task<ActionResult<IReadOnlyList<PrenotazioneResponse>>> GetAgenda() =>
+        Ok(await prenotazioneService.GetAgendaMedicoAsync(UserId));
+
     [HttpPut("{id:guid}/annulla")]
     public async Task<IActionResult> Annulla(Guid id) =>
         await prenotazioneService.AnnullaAsync(id, UserId, IsAdmin) switch
@@ -68,4 +73,6 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
 
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(AppRoles.Amministratore);
+    // Operatori che possono prenotare per conto di un paziente: Amministratore o Medico.
+    private bool IsOperatore => User.IsInRole(AppRoles.Amministratore) || User.IsInRole(AppRoles.Medico);
 }

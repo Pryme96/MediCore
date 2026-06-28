@@ -8,10 +8,12 @@ namespace MediCore.Api.Services;
 
 public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
 {
-    public async Task<(EsitoOperazione Esito, PrenotazioneResponse? Prenotazione)> CreateAsync(PrenotazioneRequest request, string userId, bool isAdmin)
+    public async Task<(EsitoOperazione Esito, PrenotazioneResponse? Prenotazione)> CreateAsync(PrenotazioneRequest request, string userId, bool puoPrenotarePerAltri)
     {
         Guid pazienteId;
-        if (isAdmin)
+        // Operatore (Amministratore o Medico): prenota per il paziente indicato nel body.
+        // Paziente: prenota per sé, il PazienteId è dedotto dall'utente autenticato.
+        if (puoPrenotarePerAltri)
         {
             if (request.PazienteId is null)
                 return (EsitoOperazione.DatiNonValidi, null);
@@ -77,11 +79,34 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         if (prenotazione is null)
             return (EsitoOperazione.NonTrovato, null);
 
-        if (!isAdmin && prenotazione.Paziente.UserId != userId)
+        if (!PuoAccedere(prenotazione, userId, isAdmin))
             return (EsitoOperazione.NonAutorizzato, null);
 
         return (EsitoOperazione.Ok, ToResponse(prenotazione, prenotazione.Slot, prenotazione.Paziente));
     }
+
+    public async Task<IReadOnlyList<PrenotazioneResponse>> GetAgendaMedicoAsync(string userId)
+    {
+        var medico = await db.Medici.FirstOrDefaultAsync(m => m.UserId == userId);
+        if (medico is null)
+            return [];
+
+        var prenotazioni = await db.Prenotazioni.AsNoTracking()
+            .Include(p => p.Paziente).ThenInclude(pz => pz.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Prestazione)
+            .Where(p => p.Slot.Turno.MedicoId == medico.MedicoId)
+            .OrderByDescending(p => p.Slot.DataOraInizio)
+            .ToListAsync();
+
+        return prenotazioni.Select(p => ToResponse(p, p.Slot, p.Paziente)).ToList();
+    }
+
+    // Accesso consentito all'Amministratore, al Paziente proprietario o al Medico titolare del turno.
+    private static bool PuoAccedere(Prenotazione prenotazione, string userId, bool isAdmin) =>
+        isAdmin
+        || prenotazione.Paziente.UserId == userId
+        || prenotazione.Slot.Turno.Medico.UserId == userId;
 
     public async Task<IReadOnlyList<PrenotazioneResponse>> GetMieAsync(string userId)
     {
@@ -104,12 +129,12 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
     {
         var prenotazione = await db.Prenotazioni
             .Include(p => p.Paziente)
-            .Include(p => p.Slot)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico)
             .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
         if (prenotazione is null)
             return EsitoOperazione.NonTrovato;
 
-        if (!isAdmin && prenotazione.Paziente.UserId != userId)
+        if (!PuoAccedere(prenotazione, userId, isAdmin))
             return EsitoOperazione.NonAutorizzato;
 
         if (prenotazione.Stato != StatoPrenotazione.Confermata)

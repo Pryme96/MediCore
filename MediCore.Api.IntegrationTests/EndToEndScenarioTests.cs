@@ -571,5 +571,62 @@ public class EndToEndScenarioTests
         client.UseToken(tokenMedico);
         var completaSenzaTariffaResponse = await client.PutAsync<object?>($"prenotazioni/{terzaPrenotazione!.Id}/completa", null);
         Assert.Equal(HttpStatusCode.BadRequest, completaSenzaTariffaResponse.StatusCode);
+
+        // 35. GET /pazienti è riservato agli operatori (Amministratore/Medico) -> 200; Paziente -> 403.
+        client.UseToken(tokenAdmin);
+        var getPazientiComeAdminResponse = await client.GetAsync("pazienti");
+        Assert.Equal(HttpStatusCode.OK, getPazientiComeAdminResponse.StatusCode);
+        var pazienti = await getPazientiComeAdminResponse.Content.ReadFromJsonAsync<List<PazienteResponse>>();
+        Assert.Contains(pazienti!, p => p.Id == prenotazione.PazienteId);
+
+        client.UseToken(tokenMedico);
+        var getPazientiComeMedicoResponse = await client.GetAsync("pazienti");
+        Assert.Equal(HttpStatusCode.OK, getPazientiComeMedicoResponse.StatusCode);
+
+        client.UseToken(tokenPaziente);
+        var getPazientiComePazienteResponse = await client.GetAsync("pazienti");
+        Assert.Equal(HttpStatusCode.Forbidden, getPazientiComePazienteResponse.StatusCode);
+
+        // 36. Il Medico prenota una visita per conto del paziente (PazienteId nel body) -> 201.
+        client.UseToken(tokenMedico);
+        var prenotazionePerPazienteResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotDisponibili[3].Id,
+            Regime = Regime.Ssn,
+            PazienteId = prenotazione.PazienteId
+        });
+        Assert.Equal(HttpStatusCode.Created, prenotazionePerPazienteResponse.StatusCode);
+        var prenotazionePerPaziente = await prenotazionePerPazienteResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
+        Assert.Equal(prenotazione.PazienteId, prenotazionePerPaziente!.PazienteId);
+
+        // 36bis. Anche l'Amministratore può prenotare per un paziente -> 201.
+        client.UseToken(tokenAdmin);
+        var prenotazioneAdminPerPazienteResponse = await client.PostAsync("prenotazioni", new
+        {
+            SlotId = slotDisponibili[4].Id,
+            Regime = Regime.Ssn,
+            PazienteId = prenotazione.PazienteId
+        });
+        Assert.Equal(HttpStatusCode.Created, prenotazioneAdminPerPazienteResponse.StatusCode);
+
+        // 37. Il Medico vede l'agenda delle prenotazioni sui propri turni e ne legge una per id.
+        client.UseToken(tokenMedico);
+        var agendaResponse = await client.GetAsync("prenotazioni/agenda");
+        Assert.Equal(HttpStatusCode.OK, agendaResponse.StatusCode);
+        var agenda = await agendaResponse.Content.ReadFromJsonAsync<List<PrenotazioneResponse>>();
+        Assert.Contains(agenda!, p => p.Id == prenotazionePerPaziente!.Id);
+
+        var getByIdComeMedicoTitolareResponse = await client.GetAsync($"prenotazioni/{prenotazionePerPaziente!.Id}");
+        Assert.Equal(HttpStatusCode.OK, getByIdComeMedicoTitolareResponse.StatusCode);
+
+        // 37bis. Il Paziente non può accedere all'agenda del medico.
+        client.UseToken(tokenPaziente);
+        var agendaComePazienteResponse = await client.GetAsync("prenotazioni/agenda");
+        Assert.Equal(HttpStatusCode.Forbidden, agendaComePazienteResponse.StatusCode);
+
+        // 38. Il Medico titolare può annullare una prenotazione sul proprio turno.
+        client.UseToken(tokenMedico);
+        var annullaComeMedicoResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazionePerPaziente.Id}/annulla", null);
+        Assert.Equal(HttpStatusCode.NoContent, annullaComeMedicoResponse.StatusCode);
     }
 }

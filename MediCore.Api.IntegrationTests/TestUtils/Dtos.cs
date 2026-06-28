@@ -31,6 +31,8 @@ public record PrestazioneResponse(Guid Id, Guid ServizioId, string ServizioNome,
 
 public record MedicoResponse(Guid Id, string Email, string Nome, string Cognome, string Specializzazione, Guid ServizioId, string ServizioNome);
 
+public record PazienteResponse(Guid Id, string Nome, string Cognome, string CodiceFiscale);
+
 public record MedicoCreatoResponse(MedicoResponse Medico, string PasswordGenerata);
 
 public record PasswordResetResponse(string PasswordGenerata);
