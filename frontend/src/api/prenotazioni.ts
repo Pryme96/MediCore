@@ -16,6 +16,11 @@ export const getPrenotazioniAgenda = async (): Promise<Prenotazione[]> => {
   return response.data;
 };
 
+export const getPrenotazioniTutte = async (): Promise<Prenotazione[]> => {
+  const response = await apiClient.get<Prenotazione[]>("/prenotazioni");
+  return response.data;
+};
+
 export const createPrenotazione = async (data: PrenotazioneInput): Promise<Prenotazione> => {
   const response = await apiClient.post<Prenotazione>("/prenotazioni", data);
   return response.data;
