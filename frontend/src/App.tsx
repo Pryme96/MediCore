@@ -8,6 +8,7 @@ import { Home } from "./pages/Home";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { Servizi } from "./pages/Servizi";
 import { GestioneServizi } from "./pages/GestioneServizi";
+import { Medici } from "./pages/Medici";
 
 function App() {
   return (
@@ -30,7 +31,14 @@ function App() {
             <Route path="prescrizioni" element={<PlaceholderPage titolo="Prescrizioni" />} />
             <Route path="referti" element={<PlaceholderPage titolo="Referti" />} />
             <Route path="fatture" element={<PlaceholderPage titolo="Fatture" />} />
-            <Route path="medici" element={<PlaceholderPage titolo="Medici" />} />
+            <Route
+              path="medici"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Amministratore"]}>
+                  <Medici />
+                </ProtectedRoute>
+              }
+            />
             <Route path="turni" element={<PlaceholderPage titolo="Turni" />} />
             <Route
               path="gestione-servizi"
