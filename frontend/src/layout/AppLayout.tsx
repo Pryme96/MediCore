@@ -10,6 +10,7 @@ import {
   ScheduleOutlined,
   UserOutlined,
   LogoutOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -26,7 +27,8 @@ interface MenuVoce {
 }
 
 const VOCI_MENU: MenuVoce[] = [
-  { key: "servizi", label: "Servizi", path: "/servizi", icona: <MedicineBoxOutlined /> },
+  { key: "gestione-servizi", label: "Gestione Servizi", path: "/gestione-servizi", icona: <AppstoreOutlined />, ruoli: ["Amministratore"] },
+  { key: "servizi", label: "Servizi", path: "/servizi", icona: <MedicineBoxOutlined />, ruoli: ["Paziente", "Medico"] },
   { key: "prenotazioni", label: "Prenotazioni", path: "/prenotazioni", icona: <CalendarOutlined /> },
   { key: "prescrizioni", label: "Prescrizioni", path: "/prescrizioni", icona: <FileTextOutlined /> },
   { key: "referti", label: "Referti", path: "/referti", icona: <FilePdfOutlined /> },

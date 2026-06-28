@@ -6,6 +6,8 @@ import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Home } from "./pages/Home";
 import { PlaceholderPage } from "./pages/PlaceholderPage";
+import { Servizi } from "./pages/Servizi";
+import { GestioneServizi } from "./pages/GestioneServizi";
 
 function App() {
   return (
@@ -23,13 +25,21 @@ function App() {
             }
           >
             <Route index element={<Home />} />
-            <Route path="servizi" element={<PlaceholderPage titolo="Servizi" />} />
+            <Route path="servizi" element={<Servizi />} />
             <Route path="prenotazioni" element={<PlaceholderPage titolo="Prenotazioni" />} />
             <Route path="prescrizioni" element={<PlaceholderPage titolo="Prescrizioni" />} />
             <Route path="referti" element={<PlaceholderPage titolo="Referti" />} />
             <Route path="fatture" element={<PlaceholderPage titolo="Fatture" />} />
             <Route path="medici" element={<PlaceholderPage titolo="Medici" />} />
             <Route path="turni" element={<PlaceholderPage titolo="Turni" />} />
+            <Route
+              path="gestione-servizi"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Amministratore"]}>
+                  <GestioneServizi />
+                </ProtectedRoute>
+              }
+            />
           </Route>
         </Routes>
       </AuthProvider>
