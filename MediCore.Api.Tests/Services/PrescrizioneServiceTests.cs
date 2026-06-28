@@ -9,6 +9,9 @@ namespace MediCore.Api.Tests.Services;
 
 public class PrescrizioneServiceTests
 {
+    private static IReadOnlyList<RigaPrescrizioneRequest> RigheValide() =>
+        [new RigaPrescrizioneRequest { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 }];
+
     private static async Task<(AppDbContext Db, Medico Medico, Paziente Paziente)> SetupAsync(bool conPrenotazionePregressa)
     {
         var db = AppDbContextFactory.Create();
@@ -98,9 +101,10 @@ public class PrescrizioneServiceTests
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         };
 
         var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
@@ -108,6 +112,94 @@ public class PrescrizioneServiceTests
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.NotNull(prescrizione);
         Assert.True(prescrizione!.NotificaInviata);
+        Assert.Single(prescrizione.Righe);
+        Assert.Equal("Aspirina 100mg", prescrizione.Righe[0].Farmaco);
+    }
+
+    [Fact]
+    public async Task CreateAsync_piano_terapeutico_con_diagnosi_restituisce_Ok()
+    {
+        var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
+        var service = new PrescrizioneService(db);
+        var request = new PrescrizioneRequest
+        {
+            PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.PianoTerapeutico,
+            Diagnosi = "Ipertensione arteriosa essenziale",
+            DurataGiorni = 180,
+            Monitoraggio = "Controllo pressorio mensile",
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddMonths(6)),
+            Righe = RigheValide()
+        };
+
+        var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(prescrizione);
+        Assert.Equal(TipoPrescrizione.PianoTerapeutico, prescrizione!.Tipo);
+        Assert.Equal("Ipertensione arteriosa essenziale", prescrizione.Diagnosi);
+    }
+
+    [Fact]
+    public async Task CreateAsync_piano_terapeutico_senza_diagnosi_restituisce_DatiNonValidi()
+    {
+        var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
+        var service = new PrescrizioneService(db);
+        var request = new PrescrizioneRequest
+        {
+            PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.PianoTerapeutico,
+            Diagnosi = "   ",
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddMonths(6)),
+            Righe = RigheValide()
+        };
+
+        var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
+
+        Assert.Equal(EsitoOperazione.DatiNonValidi, esito);
+        Assert.Null(prescrizione);
+    }
+
+    [Fact]
+    public async Task CreateAsync_senza_righe_restituisce_DatiNonValidi()
+    {
+        var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
+        var service = new PrescrizioneService(db);
+        var request = new PrescrizioneRequest
+        {
+            PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Righe = []
+        };
+
+        var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
+
+        Assert.Equal(EsitoOperazione.DatiNonValidi, esito);
+        Assert.Null(prescrizione);
+    }
+
+    [Fact]
+    public async Task CreateAsync_con_riga_senza_farmaco_restituisce_DatiNonValidi()
+    {
+        var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
+        var service = new PrescrizioneService(db);
+        var request = new PrescrizioneRequest
+        {
+            PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Righe = [new RigaPrescrizioneRequest { Farmaco = "", Posologia = "1 al giorno", Quantita = 1 }]
+        };
+
+        var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
+
+        Assert.Equal(EsitoOperazione.DatiNonValidi, esito);
+        Assert.Null(prescrizione);
     }
 
     [Fact]
@@ -118,9 +210,10 @@ public class PrescrizioneServiceTests
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         };
 
         var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
@@ -137,9 +230,10 @@ public class PrescrizioneServiceTests
         var request = new PrescrizioneRequest
         {
             PazienteId = Guid.NewGuid(),
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         };
 
         var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
@@ -157,9 +251,10 @@ public class PrescrizioneServiceTests
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = oggi,
             DataScadenza = oggi,
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         };
 
         var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
@@ -176,9 +271,10 @@ public class PrescrizioneServiceTests
         var (_, creata) = await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         }, medico.UserId);
 
         var (esito, prescrizione) = await service.GetByIdAsync(creata!.Id, "utente-estraneo");
@@ -195,15 +291,17 @@ public class PrescrizioneServiceTests
         var (_, creata) = await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         }, medico.UserId);
 
         var (esito, prescrizione) = await service.GetByIdAsync(creata!.Id, paziente.UserId);
 
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.NotNull(prescrizione);
+        Assert.Single(prescrizione!.Righe);
     }
 
     [Fact]
@@ -214,9 +312,10 @@ public class PrescrizioneServiceTests
         await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         }, medico.UserId);
 
         var mie = await service.GetMieAsync(paziente.UserId);
@@ -233,9 +332,10 @@ public class PrescrizioneServiceTests
         await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Aspirina 100mg"
+            Righe = RigheValide()
         }, medico.UserId);
 
         var emesse = await service.GetEmesseAsync(medico.UserId);

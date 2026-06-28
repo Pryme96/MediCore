@@ -137,11 +137,26 @@ const ER_ENTITIES = [
       { name: "PrescrizioneId", type: "PK", pk: true },
       { name: "PazienteId", type: "FK", fk: true },
       { name: "MedicoId", type: "FK", fk: true },
+      { name: "Tipo", type: "enum" },
+      { name: "Diagnosi", type: "string?" },
+      { name: "DurataGiorni", type: "int?" },
+      { name: "Monitoraggio", type: "string?" },
       { name: "DataEmissione", type: "date" },
       { name: "DataScadenza", type: "date" },
-      { name: "Farmaci", type: "text" },
       { name: "Note", type: "string" },
       { name: "NotificaInviata", type: "bool" },
+      ...AUDIT_FIELDS,
+    ],
+  },
+  {
+    name: "RigaPrescrizione",
+    color: "#b91c1c",
+    attrs: [
+      { name: "RigaPrescrizioneId", type: "PK", pk: true },
+      { name: "PrescrizioneId", type: "FK", fk: true },
+      { name: "Farmaco", type: "string" },
+      { name: "Posologia", type: "string" },
+      { name: "Quantita", type: "int" },
       ...AUDIT_FIELDS,
     ],
   },
@@ -176,6 +191,7 @@ const ER_RELATIONS = [
   { from: "Prenotazione", to: "Fattura",       label: "1..1", fromSide: "bottom", toSide: "top"   },
   { from: "Paziente",     to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
   { from: "Medico",       to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
+  { from: "Prescrizione", to: "RigaPrescrizione", label: "1..N", fromSide: "right", toSide: "left" },
 ];
 
 const USE_CASES = {
@@ -221,7 +237,7 @@ const CLASS_DIAGRAM = [
   { name: "AiController",            type: "Controller", color: "#4f46e5", methods: ["POST /ai/suggerisci"] },
   { name: "MistralService",          type: "Service",    color: "#4f46e5", methods: ["SuggerisciPrescrizioneAsync()", "GenerateDashboardCommentAsync()", "BuildContext()"] },
   { name: "FileStorageService",      type: "Service",    color: "#d97706", methods: ["UploadAsync()", "DownloadAsync()", "DeleteAsync()"] },
-  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<Fattura>", "SaveChangesAsync() [audit]"] },
+  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<RigaPrescrizione>", "DbSet<Fattura>", "SaveChangesAsync() [audit]"] },
 ];
 
 // ---- Layout positions ----
@@ -231,6 +247,7 @@ const ER_POS = {
   Medico:       { x: 500, y: 248  },
   Servizio:     { x: 740, y: 248  },
   Prescrizione: { x: 20,  y: 542  },
+  RigaPrescrizione: { x: 260, y: 542 },
   Turno:        { x: 500, y: 542  },
   Prestazione:  { x: 740, y: 542  },
   Tariffa:      { x: 980, y: 542  },

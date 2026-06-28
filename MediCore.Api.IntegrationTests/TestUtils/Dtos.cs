@@ -21,6 +21,12 @@ public enum Regime
     Assicurativo = 3
 }
 
+public enum TipoPrescrizione
+{
+    Farmacologica = 1,
+    PianoTerapeutico = 2
+}
+
 public record ServizioResponse(Guid Id, string Nome, string Descrizione);
 
 public record TariffaResponse(Guid Id, Guid PrestazioneId, string PrestazioneNome, Regime Regime, decimal Prezzo);
@@ -101,14 +107,20 @@ public record RefertoResponse(
     DateTime DataEmissione,
     string? Contenuto);
 
+public record RigaPrescrizioneResponse(string Farmaco, string Posologia, int Quantita);
+
 public record PrescrizioneResponse(
     Guid Id,
     Guid PazienteId,
     string PazienteNomeCompleto,
     Guid MedicoId,
     string MedicoNomeCompleto,
+    TipoPrescrizione Tipo,
+    string? Diagnosi,
+    int? DurataGiorni,
+    string? Monitoraggio,
     DateOnly DataEmissione,
     DateOnly DataScadenza,
-    string Farmaci,
     string? Note,
-    bool NotificaInviata);
+    bool NotificaInviata,
+    IReadOnlyList<RigaPrescrizioneResponse> Righe);

@@ -11,6 +11,7 @@ import { GestioneServizi } from "./pages/GestioneServizi";
 import { Medici } from "./pages/Medici";
 import { Turni } from "./pages/Turni";
 import { Prenotazioni } from "./pages/Prenotazioni";
+import { Prescrizioni } from "./pages/Prescrizioni";
 
 function App() {
   return (
@@ -37,7 +38,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="prescrizioni" element={<PlaceholderPage titolo="Prescrizioni" />} />
+            <Route
+              path="prescrizioni"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Paziente", "Medico"]}>
+                  <Prescrizioni />
+                </ProtectedRoute>
+              }
+            />
             <Route path="referti" element={<PlaceholderPage titolo="Referti" />} />
             <Route path="fatture" element={<PlaceholderPage titolo="Fatture" />} />
             <Route

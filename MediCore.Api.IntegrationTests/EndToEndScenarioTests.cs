@@ -398,33 +398,38 @@ public class EndToEndScenarioTests
         var creaPrescrizioneComePazienteResponse = await client.PostAsync("prescrizioni", new
         {
             PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Test farmaco"
+            Righe = new[] { new { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 } }
         });
         Assert.Equal(HttpStatusCode.Forbidden, creaPrescrizioneComePazienteResponse.StatusCode);
 
-        // 19. Il Medico crea una Prescrizione per il Paziente con cui ha una prenotazione pregressa.
+        // 19. Il Medico crea una Prescrizione farmacologica per il Paziente con cui ha una prenotazione pregressa.
         client.UseToken(tokenMedico);
         var prescrizioneResponse = await client.PostAsync("prescrizioni", new
         {
             PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Test farmaco"
+            Righe = new[] { new { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 } }
         });
         Assert.Equal(HttpStatusCode.Created, prescrizioneResponse.StatusCode);
         var prescrizione = await prescrizioneResponse.Content.ReadFromJsonAsync<PrescrizioneResponse>();
         Assert.NotNull(prescrizione);
         Assert.True(prescrizione!.NotificaInviata);
+        Assert.Single(prescrizione.Righe);
+        Assert.Equal("Aspirina 100mg", prescrizione.Righe[0].Farmaco);
 
         // 19bis. Paziente senza prenotazioni pregresse con questo Medico -> 400.
         var prescrizioneSenzaStoricoResponse = await client.PostAsync("prescrizioni", new
         {
             PazienteId = Guid.NewGuid(),
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
-            Farmaci = "Test farmaco"
+            Righe = new[] { new { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 } }
         });
         Assert.Equal(HttpStatusCode.BadRequest, prescrizioneSenzaStoricoResponse.StatusCode);
 
@@ -433,11 +438,52 @@ public class EndToEndScenarioTests
         var prescrizioneDataNonValidaResponse = await client.PostAsync("prescrizioni", new
         {
             PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
             DataEmissione = oggi,
             DataScadenza = oggi,
-            Farmaci = "Test farmaco"
+            Righe = new[] { new { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 } }
         });
         Assert.Equal(HttpStatusCode.BadRequest, prescrizioneDataNonValidaResponse.StatusCode);
+
+        // 19quater. Prescrizione senza righe -> 400.
+        var prescrizioneSenzaRigheResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            Righe = Array.Empty<object>()
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, prescrizioneSenzaRigheResponse.StatusCode);
+
+        // 19quinquies. Piano terapeutico senza diagnosi -> 400.
+        var pianoSenzaDiagnosiResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.PianoTerapeutico,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddMonths(6)),
+            Righe = new[] { new { Farmaco = "Ramipril 5mg", Posologia = "1 compressa al giorno", Quantita = 2 } }
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, pianoSenzaDiagnosiResponse.StatusCode);
+
+        // 19sexies. Piano terapeutico valido (con diagnosi, durata e monitoraggio) -> 201.
+        var pianoTerapeuticoResponse = await client.PostAsync("prescrizioni", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.PianoTerapeutico,
+            Diagnosi = "Ipertensione arteriosa essenziale",
+            DurataGiorni = 180,
+            Monitoraggio = "Controllo pressorio mensile",
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddMonths(6)),
+            Righe = new[] { new { Farmaco = "Ramipril 5mg", Posologia = "1 compressa al giorno", Quantita = 2 } }
+        });
+        Assert.Equal(HttpStatusCode.Created, pianoTerapeuticoResponse.StatusCode);
+        var pianoTerapeutico = await pianoTerapeuticoResponse.Content.ReadFromJsonAsync<PrescrizioneResponse>();
+        Assert.NotNull(pianoTerapeutico);
+        Assert.Equal(TipoPrescrizione.PianoTerapeutico, pianoTerapeutico!.Tipo);
+        Assert.Equal("Ipertensione arteriosa essenziale", pianoTerapeutico.Diagnosi);
 
         // 20. GET /prescrizioni/emesse come Medico autore include la prescrizione appena creata.
         var getEmesseResponse = await client.GetAsync("prescrizioni/emesse");

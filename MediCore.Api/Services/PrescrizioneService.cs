@@ -1,5 +1,6 @@
 using MediCore.Api.Data;
 using MediCore.Api.Domain.Entities;
+using MediCore.Api.Domain.Enums;
 using MediCore.Api.Dtos.Prescrizioni;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,17 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
     public async Task<(EsitoOperazione Esito, PrescrizioneResponse? Prescrizione)> CreateAsync(PrescrizioneRequest request, string userId)
     {
         if (request.DataScadenza <= request.DataEmissione)
+            return (EsitoOperazione.DatiNonValidi, null);
+
+        // Serve almeno una riga valida (farmaco + posologia + quantità positiva).
+        if (request.Righe is null || request.Righe.Count == 0 ||
+            request.Righe.Any(r => string.IsNullOrWhiteSpace(r.Farmaco)
+                || string.IsNullOrWhiteSpace(r.Posologia)
+                || r.Quantita < 1))
+            return (EsitoOperazione.DatiNonValidi, null);
+
+        // Il piano terapeutico richiede sempre la diagnosi/indicazione clinica.
+        if (request.Tipo == TipoPrescrizione.PianoTerapeutico && string.IsNullOrWhiteSpace(request.Diagnosi))
             return (EsitoOperazione.DatiNonValidi, null);
 
         var medico = await db.Medici.Include(m => m.User).FirstOrDefaultAsync(m => m.UserId == userId);
@@ -29,11 +41,20 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         {
             PazienteId = paziente.PazienteId,
             MedicoId = medico.MedicoId,
+            Tipo = request.Tipo,
+            Diagnosi = request.Diagnosi,
+            DurataGiorni = request.DurataGiorni,
+            Monitoraggio = request.Monitoraggio,
             DataEmissione = request.DataEmissione,
             DataScadenza = request.DataScadenza,
-            Farmaci = request.Farmaci,
             Note = request.Note,
-            NotificaInviata = true
+            NotificaInviata = true,
+            Righe = request.Righe.Select(r => new RigaPrescrizione
+            {
+                Farmaco = r.Farmaco,
+                Posologia = r.Posologia,
+                Quantita = r.Quantita
+            }).ToList()
         };
         db.Prescrizioni.Add(prescrizione);
         await db.SaveChangesAsync();
@@ -46,6 +67,7 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         var prescrizione = await db.Prescrizioni
             .Include(p => p.Paziente).ThenInclude(pz => pz.User)
             .Include(p => p.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Righe)
             .FirstOrDefaultAsync(p => p.PrescrizioneId == id);
         if (prescrizione is null)
             return (EsitoOperazione.NonTrovato, null);
@@ -65,6 +87,7 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         var prescrizioni = await db.Prescrizioni.AsNoTracking()
             .Include(p => p.Paziente).ThenInclude(pz => pz.User)
             .Include(p => p.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Righe)
             .Where(p => p.PazienteId == paziente.PazienteId)
             .OrderByDescending(p => p.DataEmissione)
             .ToListAsync();
@@ -81,6 +104,7 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         var prescrizioni = await db.Prescrizioni.AsNoTracking()
             .Include(p => p.Paziente).ThenInclude(pz => pz.User)
             .Include(p => p.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Righe)
             .Where(p => p.MedicoId == medico.MedicoId)
             .OrderByDescending(p => p.DataEmissione)
             .ToListAsync();
@@ -95,10 +119,21 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         PazienteNomeCompleto = $"{paziente.User.Nome} {paziente.User.Cognome}",
         MedicoId = medico.MedicoId,
         MedicoNomeCompleto = $"{medico.User.Nome} {medico.User.Cognome}",
+        Tipo = prescrizione.Tipo,
+        Diagnosi = prescrizione.Diagnosi,
+        DurataGiorni = prescrizione.DurataGiorni,
+        Monitoraggio = prescrizione.Monitoraggio,
         DataEmissione = prescrizione.DataEmissione,
         DataScadenza = prescrizione.DataScadenza,
-        Farmaci = prescrizione.Farmaci,
         Note = prescrizione.Note,
-        NotificaInviata = prescrizione.NotificaInviata
+        NotificaInviata = prescrizione.NotificaInviata,
+        Righe = prescrizione.Righe
+            .Select(r => new RigaPrescrizioneResponse
+            {
+                Farmaco = r.Farmaco,
+                Posologia = r.Posologia,
+                Quantita = r.Quantita
+            })
+            .ToList()
     };
 }

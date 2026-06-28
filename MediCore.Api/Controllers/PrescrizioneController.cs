@@ -21,7 +21,7 @@ public class PrescrizioneController(IPrescrizioneService prescrizioneService) : 
         {
             EsitoOperazione.Ok => CreatedAtAction(nameof(GetById), new { id = prescrizione!.Id }, prescrizione),
             EsitoOperazione.RiferimentoNonValido => BadRequest("Il paziente indicato non esiste o non ha mai avuto una prenotazione con questo medico."),
-            EsitoOperazione.DatiNonValidi => BadRequest("La data di scadenza deve essere successiva alla data di emissione."),
+            EsitoOperazione.DatiNonValidi => BadRequest("Dati della prescrizione non validi: verifica le date, almeno una riga con farmaco/posologia/quantità e, per il piano terapeutico, la diagnosi."),
             _ => BadRequest()
         };
     }

@@ -10,7 +10,8 @@ public class PrescrizioneConfiguration : IEntityTypeConfiguration<Prescrizione>
     {
         builder.HasKey(p => p.PrescrizioneId);
 
-        builder.Property(p => p.Farmaci).IsRequired();
+        builder.Property(p => p.Diagnosi).HasMaxLength(1000);
+        builder.Property(p => p.Monitoraggio).HasMaxLength(1000);
         builder.Property(p => p.Note).HasMaxLength(500);
 
         builder.HasOne(p => p.Paziente)
@@ -22,5 +23,11 @@ public class PrescrizioneConfiguration : IEntityTypeConfiguration<Prescrizione>
             .WithMany(m => m.Prescrizioni)
             .HasForeignKey(p => p.MedicoId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // Le righe seguono il ciclo di vita della prescrizione: eliminandola si eliminano.
+        builder.HasMany(p => p.Righe)
+            .WithOne(r => r.Prescrizione)
+            .HasForeignKey(r => r.PrescrizioneId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

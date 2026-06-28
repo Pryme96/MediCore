@@ -27,6 +27,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Prenotazione> Prenotazioni => Set<Prenotazione>();
     public DbSet<Referto> Referti => Set<Referto>();
     public DbSet<Prescrizione> Prescrizioni => Set<Prescrizione>();
+    public DbSet<RigaPrescrizione> RighePrescrizione => Set<RigaPrescrizione>();
     public DbSet<Fattura> Fatture => Set<Fattura>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
