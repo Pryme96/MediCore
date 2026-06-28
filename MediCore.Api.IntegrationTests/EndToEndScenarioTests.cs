@@ -628,5 +628,17 @@ public class EndToEndScenarioTests
         client.UseToken(tokenMedico);
         var annullaComeMedicoResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazionePerPaziente.Id}/annulla", null);
         Assert.Equal(HttpStatusCode.NoContent, annullaComeMedicoResponse.StatusCode);
+
+        // 39. GET /prenotazioni (elenco completo) è riservato all'Amministratore.
+        client.UseToken(tokenAdmin);
+        var getTutteResponse = await client.GetAsync("prenotazioni");
+        Assert.Equal(HttpStatusCode.OK, getTutteResponse.StatusCode);
+        var tutte = await getTutteResponse.Content.ReadFromJsonAsync<List<PrenotazioneResponse>>();
+        Assert.Contains(tutte!, p => p.Id == prenotazione.Id);
+
+        client.UseToken(tokenMedico);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("prenotazioni")).StatusCode);
+        client.UseToken(tokenPaziente);
+        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("prenotazioni")).StatusCode);
     }
 }

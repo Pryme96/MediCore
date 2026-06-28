@@ -244,6 +244,20 @@ public class PrenotazioneServiceTests
     }
 
     [Fact]
+    public async Task GetAllAsync_restituisce_tutte_le_prenotazioni()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var tutte = await service.GetAllAsync();
+
+        Assert.Single(tutte);
+        Assert.Equal(paziente.PazienteId, tutte[0].PazienteId);
+    }
+
+    [Fact]
     public async Task GetAgendaMedicoAsync_per_utente_non_medico_restituisce_lista_vuota()
     {
         var (db, _, _) = await SetupAsync();

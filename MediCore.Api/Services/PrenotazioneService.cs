@@ -85,6 +85,18 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         return (EsitoOperazione.Ok, ToResponse(prenotazione, prenotazione.Slot, prenotazione.Paziente));
     }
 
+    public async Task<IReadOnlyList<PrenotazioneResponse>> GetAllAsync()
+    {
+        var prenotazioni = await db.Prenotazioni.AsNoTracking()
+            .Include(p => p.Paziente).ThenInclude(pz => pz.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico).ThenInclude(m => m.User)
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Prestazione)
+            .OrderByDescending(p => p.Slot.DataOraInizio)
+            .ToListAsync();
+
+        return prenotazioni.Select(p => ToResponse(p, p.Slot, p.Paziente)).ToList();
+    }
+
     public async Task<IReadOnlyList<PrenotazioneResponse>> GetAgendaMedicoAsync(string userId)
     {
         var medico = await db.Medici.FirstOrDefaultAsync(m => m.UserId == userId);

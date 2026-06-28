@@ -48,6 +48,11 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
     public async Task<ActionResult<IReadOnlyList<PrenotazioneResponse>>> GetAgenda() =>
         Ok(await prenotazioneService.GetAgendaMedicoAsync(UserId));
 
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Amministratore)]
+    public async Task<ActionResult<IReadOnlyList<PrenotazioneResponse>>> GetAll() =>
+        Ok(await prenotazioneService.GetAllAsync());
+
     [HttpPut("{id:guid}/annulla")]
     public async Task<IActionResult> Annulla(Guid id) =>
         await prenotazioneService.AnnullaAsync(id, UserId, IsAdmin) switch
