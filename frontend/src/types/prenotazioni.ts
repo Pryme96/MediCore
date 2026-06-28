@@ -43,4 +43,6 @@ export interface PrenotazioneInput {
   slotId: string;
   regime: Regime;
   note?: string;
+  // Valorizzato solo quando un operatore (Amministratore/Medico) prenota per un paziente.
+  pazienteId?: string;
 }

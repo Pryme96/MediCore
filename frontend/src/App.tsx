@@ -32,7 +32,7 @@ function App() {
             <Route
               path="prenotazioni"
               element={
-                <ProtectedRoute ruoliConsentiti={["Paziente"]}>
+                <ProtectedRoute ruoliConsentiti={["Paziente", "Amministratore", "Medico"]}>
                   <Prenotazioni />
                 </ProtectedRoute>
               }

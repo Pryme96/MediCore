@@ -6,6 +6,7 @@ import {
   Descriptions,
   Input,
   Radio,
+  Select,
   Space,
   Spin,
   Steps,
@@ -16,27 +17,45 @@ import dayjs from "dayjs";
 import { getErrorMessage } from "../../api/client";
 import { palette } from "../../theme/colors";
 import { getServizi, getPrestazioniPerServizio, getTariffePerPrestazione } from "../../api/servizi";
+import { getPazienti } from "../../api/pazienti";
 import { createPrenotazione, getSlotPerPrestazione } from "../../api/prenotazioni";
 import { ETICHETTE_REGIME, type Prestazione, type Servizio, type Tariffa } from "../../types/servizi";
 import type { Slot } from "../../types/prenotazioni";
+import type { Paziente } from "../../types/pazienti";
 import { CalendarioSlot } from "./CalendarioSlot";
 
 interface StepperPrenotazioneProps {
+  // In modalità operatore (Amministratore/Medico) si prenota per un paziente scelto da una lista.
+  modalitaOperatore?: boolean;
   onCompletato: () => void;
   onAnnulla: () => void;
 }
 
-const PASSI = [
-  { title: "Servizio" },
-  { title: "Prestazione" },
-  { title: "Data e ora" },
-  { title: "Regime" },
-  { title: "Riepilogo" },
-];
+type ChiavePasso = "paziente" | "servizio" | "prestazione" | "slot" | "regime" | "riepilogo";
 
-export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotazioneProps) {
+const TITOLI_PASSO: Record<ChiavePasso, string> = {
+  paziente: "Paziente",
+  servizio: "Servizio",
+  prestazione: "Prestazione",
+  slot: "Data e ora",
+  regime: "Regime",
+  riepilogo: "Riepilogo",
+};
+
+export function StepperPrenotazione({
+  modalitaOperatore = false,
+  onCompletato,
+  onAnnulla,
+}: StepperPrenotazioneProps) {
+  const chiavi: ChiavePasso[] = modalitaOperatore
+    ? ["paziente", "servizio", "prestazione", "slot", "regime", "riepilogo"]
+    : ["servizio", "prestazione", "slot", "regime", "riepilogo"];
+
   const [passo, setPasso] = useState(0);
   const [errore, setErrore] = useState("");
+
+  const [pazienti, setPazienti] = useState<Paziente[]>([]);
+  const [pazienteId, setPazienteId] = useState<string | null>(null);
 
   const [servizi, setServizi] = useState<Servizio[]>([]);
   const [servizioId, setServizioId] = useState<string | null>(null);
@@ -59,7 +78,12 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
     getServizi()
       .then(setServizi)
       .catch((error) => setErrore(getErrorMessage(error, "Impossibile caricare i servizi.")));
-  }, []);
+    if (modalitaOperatore) {
+      getPazienti()
+        .then(setPazienti)
+        .catch((error) => setErrore(getErrorMessage(error, "Impossibile caricare i pazienti.")));
+    }
+  }, [modalitaOperatore]);
 
   const selezionaServizio = (id: string) => {
     setServizioId(id);
@@ -93,10 +117,16 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
 
   const conferma = async () => {
     if (!slot || regime === null) return;
+    if (modalitaOperatore && !pazienteId) return;
     setInvio(true);
     setErrore("");
     try {
-      await createPrenotazione({ slotId: slot.id, regime, note: note.trim() || undefined });
+      await createPrenotazione({
+        slotId: slot.id,
+        regime,
+        note: note.trim() || undefined,
+        pazienteId: modalitaOperatore ? pazienteId! : undefined,
+      });
       message.success("Prenotazione effettuata.");
       onCompletato();
     } catch (error) {
@@ -108,40 +138,59 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
     }
   };
 
+  const chiave = chiavi[passo];
   const puoAvanzare =
-    (passo === 0 && servizioId !== null) ||
-    (passo === 1 && prestazione !== null) ||
-    (passo === 2 && slot !== null) ||
-    (passo === 3 && regime !== null);
+    (chiave === "paziente" && pazienteId !== null) ||
+    (chiave === "servizio" && servizioId !== null) ||
+    (chiave === "prestazione" && prestazione !== null) ||
+    (chiave === "slot" && slot !== null) ||
+    (chiave === "regime" && regime !== null);
 
   const tariffaScelta = tariffe.find((t) => t.regime === regime);
   const servizioScelto = servizi.find((s) => s.id === servizioId);
+  const pazienteScelto = pazienti.find((p) => p.id === pazienteId);
 
   return (
     <div>
       <Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
         <Typography.Title level={3} style={{ margin: 0 }}>
-          Prenota una visita
+          {modalitaOperatore ? "Prenota per un paziente" : "Prenota una visita"}
         </Typography.Title>
         <Button onClick={onAnnulla}>Torna alle prenotazioni</Button>
       </Space>
 
-      <Steps current={passo} items={PASSI} style={{ marginBottom: 24 }} />
+      <Steps current={passo} items={chiavi.map((c) => ({ title: TITOLI_PASSO[c] }))} style={{ marginBottom: 24 }} />
 
       {errore && <Alert type="error" message={errore} style={{ marginBottom: 16 }} closable onClose={() => setErrore("")} />}
 
-      {/* Passo 1: Servizio */}
-      {passo === 0 && (
+      {chiave === "paziente" && (
+        <div>
+          <Typography.Text>Seleziona il paziente</Typography.Text>
+          <Select
+            showSearch
+            placeholder="Cerca per cognome, nome o codice fiscale"
+            style={{ width: "100%", maxWidth: 520, marginTop: 8, display: "block" }}
+            value={pazienteId}
+            onChange={(value) => setPazienteId(value)}
+            filterOption={(input, option) =>
+              (option?.label ?? "").toLowerCase().includes(input.toLowerCase())
+            }
+            options={pazienti.map((p) => ({
+              value: p.id,
+              label: `${p.cognome} ${p.nome} — ${p.codiceFiscale}`,
+            }))}
+          />
+        </div>
+      )}
+
+      {chiave === "servizio" && (
         <Space wrap>
           {servizi.map((s) => (
             <Card
               key={s.id}
               hoverable
               onClick={() => selezionaServizio(s.id)}
-              style={{
-                width: 240,
-                outline: servizioId === s.id ? `2px solid ${palette.primary}` : "none",
-              }}
+              style={{ width: 240, outline: servizioId === s.id ? `2px solid ${palette.primary}` : "none" }}
             >
               <Card.Meta title={s.nome} description={s.descrizione} />
             </Card>
@@ -149,8 +198,7 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
         </Space>
       )}
 
-      {/* Passo 2: Prestazione */}
-      {passo === 1 &&
+      {chiave === "prestazione" &&
         (caricamentoPrestazioni ? (
           <Spin />
         ) : (
@@ -160,10 +208,7 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
                 key={p.id}
                 hoverable
                 onClick={() => selezionaPrestazione(p)}
-                style={{
-                  width: 260,
-                  outline: prestazione?.id === p.id ? `2px solid ${palette.primary}` : "none",
-                }}
+                style={{ width: 260, outline: prestazione?.id === p.id ? `2px solid ${palette.primary}` : "none" }}
               >
                 <Card.Meta title={p.nome} description={`${p.descrizione} — ${p.durataMinuti} min`} />
               </Card>
@@ -171,16 +216,10 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
           </Space>
         ))}
 
-      {/* Passo 3: Data e ora */}
-      {passo === 2 &&
-        (caricamentoSlot ? (
-          <Spin />
-        ) : (
-          <CalendarioSlot slots={slots} slotSelezionato={slot} onSelect={setSlot} />
-        ))}
+      {chiave === "slot" &&
+        (caricamentoSlot ? <Spin /> : <CalendarioSlot slots={slots} slotSelezionato={slot} onSelect={setSlot} />)}
 
-      {/* Passo 4: Regime + note */}
-      {passo === 3 && (
+      {chiave === "regime" && (
         <div>
           {tariffe.length === 0 ? (
             <Alert
@@ -214,15 +253,18 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
         </div>
       )}
 
-      {/* Passo 5: Riepilogo */}
-      {passo === 4 && slot && (
+      {chiave === "riepilogo" && slot && (
         <Descriptions bordered column={1}>
+          {modalitaOperatore && (
+            <Descriptions.Item label="Paziente">
+              {pazienteScelto && `${pazienteScelto.cognome} ${pazienteScelto.nome} — ${pazienteScelto.codiceFiscale}`}
+            </Descriptions.Item>
+          )}
           <Descriptions.Item label="Servizio">{servizioScelto?.nome}</Descriptions.Item>
           <Descriptions.Item label="Prestazione">{prestazione?.nome}</Descriptions.Item>
           <Descriptions.Item label="Medico">{slot.medicoNomeCompleto}</Descriptions.Item>
           <Descriptions.Item label="Data e ora">
-            {dayjs(slot.dataOraInizio).format("DD/MM/YYYY HH:mm")} –{" "}
-            {dayjs(slot.dataOraFine).format("HH:mm")}
+            {dayjs(slot.dataOraInizio).format("DD/MM/YYYY HH:mm")} – {dayjs(slot.dataOraFine).format("HH:mm")}
           </Descriptions.Item>
           <Descriptions.Item label="Regime">
             {regime !== null && ETICHETTE_REGIME[regime as Tariffa["regime"]]}
@@ -234,12 +276,12 @@ export function StepperPrenotazione({ onCompletato, onAnnulla }: StepperPrenotaz
 
       <Space style={{ marginTop: 24 }}>
         {passo > 0 && <Button onClick={() => setPasso((p) => p - 1)}>Indietro</Button>}
-        {passo < 4 && (
+        {passo < chiavi.length - 1 && (
           <Button type="primary" disabled={!puoAvanzare} onClick={() => setPasso((p) => p + 1)}>
             Avanti
           </Button>
         )}
-        {passo === 4 && (
+        {passo === chiavi.length - 1 && (
           <Button type="primary" loading={invio} onClick={conferma}>
             Conferma prenotazione
           </Button>
