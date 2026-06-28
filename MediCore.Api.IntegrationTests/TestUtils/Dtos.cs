@@ -33,6 +33,8 @@ public record MedicoResponse(Guid Id, string Email, string Nome, string Cognome,
 
 public record MedicoCreatoResponse(MedicoResponse Medico, string PasswordGenerata);
 
+public record PasswordResetResponse(string PasswordGenerata);
+
 public record TurnoResponse(
     Guid Id,
     Guid MedicoId,

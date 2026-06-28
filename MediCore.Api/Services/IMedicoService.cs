@@ -8,4 +8,5 @@ public interface IMedicoService
     Task<MedicoResponse?> GetByIdAsync(Guid id);
     Task<(EsitoOperazione Esito, MedicoCreatoResponse? Medico)> CreateAsync(MedicoRequest request);
     Task<EsitoOperazione> UpdateAsync(Guid id, MedicoUpdateRequest request);
+    Task<(EsitoOperazione Esito, PasswordResetResponse? Risultato)> ResetPasswordAsync(Guid id);
 }

@@ -162,6 +162,8 @@ public class EndToEndScenarioTests
         var medicoCreato = await medicoResponse.Content.ReadFromJsonAsync<MedicoCreatoResponse>();
         Assert.NotNull(medicoCreato);
         Assert.False(string.IsNullOrWhiteSpace(medicoCreato!.PasswordGenerata));
+        // Password corrente del medico: aggiornata dal reset al passo 7quater e riusata al login (passo 17).
+        var passwordMedico = medicoCreato.PasswordGenerata;
 
         // 7bis. Stessa email medico -> 409. Servizio inesistente -> 400.
         var medicoEmailDuplicataResponse = await client.PostAsync("medici", new
@@ -199,6 +201,19 @@ public class EndToEndScenarioTests
         });
         Assert.Equal(HttpStatusCode.NotFound, medicoUpdateInesistenteResponse.StatusCode);
 
+        // 7quater. Reset password del Medico: l'Amministratore rigenera una password temporanea.
+        var resetPasswordResponse = await client.PostAsync($"medici/{medicoCreato.Medico.Id}/reset-password", new { });
+        Assert.Equal(HttpStatusCode.OK, resetPasswordResponse.StatusCode);
+        var resetPassword = await resetPasswordResponse.Content.ReadFromJsonAsync<PasswordResetResponse>();
+        Assert.NotNull(resetPassword);
+        Assert.False(string.IsNullOrWhiteSpace(resetPassword!.PasswordGenerata));
+        Assert.NotEqual(passwordMedico, resetPassword.PasswordGenerata);
+        // Da qui in poi vale la nuova password (verificata al login del passo 17).
+        passwordMedico = resetPassword.PasswordGenerata;
+
+        var resetPasswordInesistenteResponse = await client.PostAsync($"medici/{Guid.NewGuid()}/reset-password", new { });
+        Assert.Equal(HttpStatusCode.NotFound, resetPasswordInesistenteResponse.StatusCode);
+
         client.UseToken(tokenPaziente);
         var medicoUpdateComePazienteResponse = await client.PutAsync($"medici/{medicoCreato.Medico.Id}", new
         {
@@ -206,6 +221,10 @@ public class EndToEndScenarioTests
             ServizioId = servizio.Id
         });
         Assert.Equal(HttpStatusCode.Forbidden, medicoUpdateComePazienteResponse.StatusCode);
+
+        // Il Paziente non può resettare la password di un medico.
+        var resetPasswordComePazienteResponse = await client.PostAsync($"medici/{medicoCreato.Medico.Id}/reset-password", new { });
+        Assert.Equal(HttpStatusCode.Forbidden, resetPasswordComePazienteResponse.StatusCode);
         client.UseToken(tokenAdmin);
 
         // 8. Crea Turno per il Medico sulla Prestazione appena creata.
@@ -348,7 +367,7 @@ public class EndToEndScenarioTests
 
         // 17. Login del Medico creato al passo 7 (la prenotazione annullata al passo 15 resta
         // comunque una prenotazione "pregressa" tra questo Medico e questo Paziente).
-        var tokenMedico = await client.LoginAsync(emailMedico, medicoCreato.PasswordGenerata);
+        var tokenMedico = await client.LoginAsync(emailMedico, passwordMedico);
         Assert.False(string.IsNullOrWhiteSpace(tokenMedico));
         client.UseToken(tokenMedico);
 

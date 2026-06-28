@@ -81,6 +81,25 @@ public class MedicoService(AppDbContext db, UserManager<AppUser> userManager) : 
         return EsitoOperazione.Ok;
     }
 
+    public async Task<(EsitoOperazione Esito, PasswordResetResponse? Risultato)> ResetPasswordAsync(Guid id)
+    {
+        var medico = await db.Medici.FirstOrDefaultAsync(m => m.MedicoId == id);
+        if (medico is null)
+            return (EsitoOperazione.NonTrovato, null);
+
+        var user = await userManager.FindByIdAsync(medico.UserId);
+        if (user is null)
+            return (EsitoOperazione.NonTrovato, null);
+
+        var password = GeneraPassword();
+        await userManager.RemovePasswordAsync(user);
+        var result = await userManager.AddPasswordAsync(user, password);
+        if (!result.Succeeded)
+            return (EsitoOperazione.DatiNonValidi, null);
+
+        return (EsitoOperazione.Ok, new PasswordResetResponse { PasswordGenerata = password });
+    }
+
     // Password temporanea conforme alle regole di Identity (maiuscola, minuscola, cifra, carattere speciale, min 8 caratteri).
     private static string GeneraPassword()
     {

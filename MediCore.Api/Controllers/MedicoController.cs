@@ -47,4 +47,18 @@ public class MedicoController(IMedicoService medicoService) : ControllerBase
             EsitoOperazione.RiferimentoNonValido => BadRequest("Il servizio indicato non esiste."),
             _ => BadRequest()
         };
+
+    [HttpPost("{id:guid}/reset-password")]
+    [Authorize(Roles = AppRoles.Amministratore)]
+    public async Task<ActionResult<PasswordResetResponse>> ResetPassword(Guid id)
+    {
+        var (esito, risultato) = await medicoService.ResetPasswordAsync(id);
+        return esito switch
+        {
+            EsitoOperazione.Ok => Ok(risultato),
+            EsitoOperazione.NonTrovato => NotFound(),
+            EsitoOperazione.DatiNonValidi => BadRequest("Impossibile reimpostare la password del medico."),
+            _ => BadRequest()
+        };
+    }
 }

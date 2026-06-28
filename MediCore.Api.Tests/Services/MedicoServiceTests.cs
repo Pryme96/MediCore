@@ -156,6 +156,48 @@ public class MedicoServiceTests
     }
 
     [Fact]
+    public async Task ResetPasswordAsync_genera_una_nuova_password_valida()
+    {
+        var (db, servizio) = await SetupAsync();
+        var userManager = UserManagerFactory.Create(db);
+        var service = new MedicoService(db, userManager);
+        var (_, creato) = await service.CreateAsync(new MedicoRequest
+        {
+            Email = "mario.rossi@medicore.local",
+            Nome = "Mario",
+            Cognome = "Rossi",
+            Specializzazione = "Cardiologia",
+            ServizioId = servizio.ServizioId
+        });
+        var passwordIniziale = creato!.PasswordGenerata;
+
+        var (esito, risultato) = await service.ResetPasswordAsync(creato.Medico.Id);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.NotNull(risultato);
+        Assert.False(string.IsNullOrWhiteSpace(risultato!.PasswordGenerata));
+        Assert.NotEqual(passwordIniziale, risultato.PasswordGenerata);
+
+        // La nuova password deve essere effettivamente quella valida sull'account.
+        var user = await userManager.FindByEmailAsync("mario.rossi@medicore.local");
+        Assert.True(await userManager.CheckPasswordAsync(user!, risultato.PasswordGenerata));
+        Assert.False(await userManager.CheckPasswordAsync(user!, passwordIniziale));
+    }
+
+    [Fact]
+    public async Task ResetPasswordAsync_su_medico_inesistente_restituisce_NonTrovato()
+    {
+        var db = AppDbContextFactory.Create();
+        var userManager = UserManagerFactory.Create(db);
+        var service = new MedicoService(db, userManager);
+
+        var (esito, risultato) = await service.ResetPasswordAsync(Guid.NewGuid());
+
+        Assert.Equal(EsitoOperazione.NonTrovato, esito);
+        Assert.Null(risultato);
+    }
+
+    [Fact]
     public async Task UpdateAsync_su_medico_inesistente_restituisce_NonTrovato()
     {
         var db = AppDbContextFactory.Create();
