@@ -371,6 +371,19 @@ public class EndToEndScenarioTests
         Assert.False(string.IsNullOrWhiteSpace(tokenMedico));
         client.UseToken(tokenMedico);
 
+        // 17bis. GET /turni/miei: il Medico vede i propri turni (incluso quello creato al passo 8).
+        var turniMieiResponse = await client.GetAsync("turni/miei");
+        Assert.Equal(HttpStatusCode.OK, turniMieiResponse.StatusCode);
+        var turniMiei = await turniMieiResponse.Content.ReadFromJsonAsync<List<TurnoResponse>>();
+        Assert.NotNull(turniMiei);
+        Assert.Contains(turniMiei!, t => t.MedicoId == medicoCreato.Medico.Id);
+
+        // Il Paziente non può accedere a /turni/miei (solo Medico).
+        client.UseToken(tokenPaziente);
+        var turniMieiComePazienteResponse = await client.GetAsync("turni/miei");
+        Assert.Equal(HttpStatusCode.Forbidden, turniMieiComePazienteResponse.StatusCode);
+        client.UseToken(tokenMedico);
+
         // 18. Il Paziente NON può creare una Prescrizione (solo Medico).
         client.UseToken(tokenPaziente);
         var creaPrescrizioneComePazienteResponse = await client.PostAsync("prescrizioni", new

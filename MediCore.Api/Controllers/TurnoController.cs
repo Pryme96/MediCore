@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using MediCore.Api.Domain.Common;
 using MediCore.Api.Dtos.Turni;
 using MediCore.Api.Services;
@@ -25,6 +26,11 @@ public class TurnoController(ITurnoService turnoService) : ControllerBase
     [HttpGet("medico/{medicoId:guid}")]
     public async Task<ActionResult<IReadOnlyList<TurnoResponse>>> GetByMedico(Guid medicoId) =>
         Ok(await turnoService.GetByMedicoAsync(medicoId));
+
+    [HttpGet("miei")]
+    [Authorize(Roles = AppRoles.Medico)]
+    public async Task<ActionResult<IReadOnlyList<TurnoResponse>>> GetMiei() =>
+        Ok(await turnoService.GetMieiAsync(UserId));
 
     [HttpPost]
     [Authorize(Roles = AppRoles.Amministratore)]
@@ -58,4 +64,6 @@ public class TurnoController(ITurnoService turnoService) : ControllerBase
     [Authorize(Roles = AppRoles.Amministratore)]
     public async Task<IActionResult> Delete(Guid id) =>
         await turnoService.DeleteAsync(id) ? NoContent() : NotFound();
+
+    private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 }

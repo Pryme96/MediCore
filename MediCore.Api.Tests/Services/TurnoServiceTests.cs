@@ -157,6 +157,50 @@ public class TurnoServiceTests
     }
 
     [Fact]
+    public async Task GetMieiAsync_restituisce_solo_i_turni_del_medico_corrente()
+    {
+        var (db, medico, prestazione) = await SetupAsync();
+        var service = new TurnoService(db);
+        await service.CreateAsync(BuildRequest(medico, prestazione, new TimeOnly(9, 0), new TimeOnly(12, 0)));
+
+        // Secondo medico con un proprio turno: non deve comparire tra i turni del primo.
+        var altroUser = new AppUser
+        {
+            UserName = "altro@medicore.local",
+            Email = "altro@medicore.local",
+            Nome = "Luca",
+            Cognome = "Bianchi"
+        };
+        var altroMedico = new Medico
+        {
+            UserId = altroUser.Id,
+            Specializzazione = "Ortopedia",
+            ServizioId = prestazione.ServizioId
+        };
+        db.Users.Add(altroUser);
+        db.Medici.Add(altroMedico);
+        await db.SaveChangesAsync();
+        await service.CreateAsync(BuildRequest(altroMedico, prestazione, new TimeOnly(9, 0), new TimeOnly(12, 0)));
+
+        var miei = await service.GetMieiAsync(medico.UserId);
+
+        Assert.Single(miei);
+        Assert.Equal(medico.MedicoId, miei[0].MedicoId);
+    }
+
+    [Fact]
+    public async Task GetMieiAsync_per_utente_non_medico_restituisce_lista_vuota()
+    {
+        var (db, medico, prestazione) = await SetupAsync();
+        var service = new TurnoService(db);
+        await service.CreateAsync(BuildRequest(medico, prestazione, new TimeOnly(9, 0), new TimeOnly(12, 0)));
+
+        var miei = await service.GetMieiAsync("utente-non-medico");
+
+        Assert.Empty(miei);
+    }
+
+    [Fact]
     public async Task UpdateAsync_su_turno_inesistente_restituisce_NonTrovato()
     {
         var (db, medico, prestazione) = await SetupAsync();

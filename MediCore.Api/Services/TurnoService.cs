@@ -16,6 +16,17 @@ public class TurnoService(AppDbContext db) : ITurnoService
             .Where(t => t.MedicoId == medicoId)
             .OrderBy(t => t.GiornoSettimana).ThenBy(t => t.OraInizio)).ToListAsync();
 
+    public async Task<IReadOnlyList<TurnoResponse>> GetMieiAsync(string userId)
+    {
+        var medico = await db.Medici.FirstOrDefaultAsync(m => m.UserId == userId);
+        if (medico is null)
+            return [];
+
+        return await Project(db.Turni.AsNoTracking()
+            .Where(t => t.MedicoId == medico.MedicoId)
+            .OrderBy(t => t.GiornoSettimana).ThenBy(t => t.OraInizio)).ToListAsync();
+    }
+
     public async Task<TurnoResponse?> GetByIdAsync(Guid id) =>
         await Project(db.Turni.AsNoTracking().Where(t => t.TurnoId == id))
             .FirstOrDefaultAsync();
