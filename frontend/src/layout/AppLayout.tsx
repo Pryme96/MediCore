@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Layout, Menu, Button, Typography, Card, Avatar } from "antd";
+import { Layout, Menu, Button, Typography, Avatar } from "antd";
 import {
   MedicineBoxOutlined,
   CalendarOutlined,

@@ -49,6 +49,7 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
             DataScadenza = request.DataScadenza,
             Note = request.Note,
             NotificaInviata = true,
+            OriginAssistita = request.OriginAssistita,
             Righe = request.Righe.Select(r => new RigaPrescrizione
             {
                 Farmaco = r.Farmaco,
@@ -127,6 +128,7 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         DataScadenza = prescrizione.DataScadenza,
         Note = prescrizione.Note,
         NotificaInviata = prescrizione.NotificaInviata,
+        OriginAssistita = prescrizione.OriginAssistita,
         Righe = prescrizione.Righe
             .Select(r => new RigaPrescrizioneResponse
             {

@@ -19,6 +19,9 @@ public class Prescrizione : AuditableEntity
     public DateOnly DataScadenza { get; set; }
     public string? Note { get; set; }
     public bool NotificaInviata { get; set; }
+    // Provenienza della bozza: true se nata con l'assistenza AI alla redazione (auto-dichiarato
+    // dal client; l'endpoint di suggerimento è stateless e non persiste le proposte).
+    public bool OriginAssistita { get; set; }
 
     public Paziente Paziente { get; set; } = null!;
     public Medico Medico { get; set; } = null!;

@@ -30,6 +30,7 @@ export interface Prescrizione {
   dataScadenza: string;
   note: string | null;
   notificaInviata: boolean;
+  originAssistita: boolean;
   righe: RigaPrescrizione[];
 }
 
@@ -42,5 +43,7 @@ export interface PrescrizioneInput {
   dataEmissione: string;
   dataScadenza: string;
   note?: string;
+  // true se la bozza nasce dall'assistenza AI alla redazione.
+  originAssistita?: boolean;
   righe: RigaPrescrizione[];
 }

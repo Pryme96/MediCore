@@ -81,6 +81,16 @@ try
     builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
     builder.Services.AddScoped<IRefertoService, RefertoService>();
     builder.Services.AddScoped<IFatturaService, FatturaService>();
+    builder.Services.AddScoped<ISuggerimentoService, SuggerimentoService>();
+
+    // Client dell'assistente di redazione clinica (Mistral). La chiave (Mistral:ApiKey) non è
+    // committata: in dev va impostata via User Secrets, altrimenti il service va in modalità demo.
+    var mistralSection = builder.Configuration.GetSection("Mistral");
+    builder.Services.AddHttpClient<IMistralService, MistralService>(client =>
+    {
+        client.BaseAddress = new Uri(mistralSection["BaseUrl"] ?? "https://api.mistral.ai");
+        client.Timeout = TimeSpan.FromSeconds(mistralSection.GetValue("TimeoutSeconds", 30));
+    });
 
     var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
     builder.Services.AddCors(options =>

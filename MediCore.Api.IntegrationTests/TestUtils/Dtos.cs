@@ -123,4 +123,32 @@ public record PrescrizioneResponse(
     DateOnly DataScadenza,
     string? Note,
     bool NotificaInviata,
+    bool OriginAssistita,
     IReadOnlyList<RigaPrescrizioneResponse> Righe);
+
+public enum Sesso
+{
+    Maschile = 1,
+    Femminile = 2
+}
+
+public record DatiClinici(
+    TipoPrescrizione Tipo,
+    int Eta,
+    Sesso? Sesso,
+    string ContestoClinico,
+    string? Allergie,
+    string? TerapieInCorso);
+
+public record SuggerimentoOpzione(
+    IReadOnlyList<RigaPrescrizioneResponse> Righe,
+    string? DiagnosiSuggerita,
+    int? DurataGiorni,
+    string? Monitoraggio,
+    string Motivazione,
+    string? Avvertenze);
+
+public record SuggerimentoResponse(
+    IReadOnlyList<SuggerimentoOpzione> Opzioni,
+    DatiClinici DatiInviati,
+    bool Demo);

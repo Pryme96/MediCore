@@ -419,6 +419,7 @@ public class EndToEndScenarioTests
         var prescrizione = await prescrizioneResponse.Content.ReadFromJsonAsync<PrescrizioneResponse>();
         Assert.NotNull(prescrizione);
         Assert.True(prescrizione!.NotificaInviata);
+        Assert.False(prescrizione.OriginAssistita);
         Assert.Single(prescrizione.Righe);
         Assert.Equal("Aspirina 100mg", prescrizione.Righe[0].Farmaco);
 
@@ -477,6 +478,7 @@ public class EndToEndScenarioTests
             Monitoraggio = "Controllo pressorio mensile",
             DataEmissione = DateOnly.FromDateTime(DateTime.Now),
             DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddMonths(6)),
+            OriginAssistita = true,
             Righe = new[] { new { Farmaco = "Ramipril 5mg", Posologia = "1 compressa al giorno", Quantita = 2 } }
         });
         Assert.Equal(HttpStatusCode.Created, pianoTerapeuticoResponse.StatusCode);
@@ -484,6 +486,7 @@ public class EndToEndScenarioTests
         Assert.NotNull(pianoTerapeutico);
         Assert.Equal(TipoPrescrizione.PianoTerapeutico, pianoTerapeutico!.Tipo);
         Assert.Equal("Ipertensione arteriosa essenziale", pianoTerapeutico.Diagnosi);
+        Assert.True(pianoTerapeutico.OriginAssistita);
 
         // 20. GET /prescrizioni/emesse come Medico autore include la prescrizione appena creata.
         var getEmesseResponse = await client.GetAsync("prescrizioni/emesse");
@@ -686,5 +689,50 @@ public class EndToEndScenarioTests
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("prenotazioni")).StatusCode);
         client.UseToken(tokenPaziente);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync("prenotazioni")).StatusCode);
+
+        // 40. Il Paziente NON può richiedere suggerimenti AI (solo Medico).
+        var suggerisciComePazienteResponse = await client.PostAsync("ai/suggerisci", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            ContestoClinico = "Cefalea ricorrente da una settimana"
+        });
+        Assert.Equal(HttpStatusCode.Forbidden, suggerisciComePazienteResponse.StatusCode);
+
+        // 41. Il Medico ottiene suggerimenti per il paziente con cui ha una prenotazione pregressa.
+        // Nessuna chiave Mistral configurata in test -> modalità demo (Demo = true), nessuna chiamata di rete.
+        client.UseToken(tokenMedico);
+        var suggerisciResponse = await client.PostAsync("ai/suggerisci", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            ContestoClinico = "Cefalea ricorrente da una settimana"
+        });
+        Assert.Equal(HttpStatusCode.OK, suggerisciResponse.StatusCode);
+        var suggerimento = await suggerisciResponse.Content.ReadFromJsonAsync<SuggerimentoResponse>();
+        Assert.NotNull(suggerimento);
+        Assert.True(suggerimento!.Demo);
+        Assert.NotEmpty(suggerimento.Opzioni);
+        Assert.All(suggerimento.Opzioni, o => Assert.NotEmpty(o.Righe));
+        Assert.Equal(TipoPrescrizione.Farmacologica, suggerimento.DatiInviati.Tipo);
+        Assert.True(suggerimento.DatiInviati.Eta > 0);
+
+        // 41bis. Paziente senza prenotazioni pregresse con questo Medico -> 400.
+        var suggerisciSenzaStoricoResponse = await client.PostAsync("ai/suggerisci", new
+        {
+            PazienteId = Guid.NewGuid(),
+            Tipo = TipoPrescrizione.Farmacologica,
+            ContestoClinico = "Cefalea ricorrente da una settimana"
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, suggerisciSenzaStoricoResponse.StatusCode);
+
+        // 41ter. Contesto clinico assente -> 400.
+        var suggerisciSenzaContestoResponse = await client.PostAsync("ai/suggerisci", new
+        {
+            PazienteId = prenotazione.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            ContestoClinico = ""
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, suggerisciSenzaContestoResponse.StatusCode);
     }
 }

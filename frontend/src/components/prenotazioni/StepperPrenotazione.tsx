@@ -19,7 +19,7 @@ import { palette } from "../../theme/colors";
 import { getServizi, getPrestazioniPerServizio, getTariffePerPrestazione } from "../../api/servizi";
 import { getPazienti } from "../../api/pazienti";
 import { createPrenotazione, getSlotPerPrestazione } from "../../api/prenotazioni";
-import { ETICHETTE_REGIME, type Prestazione, type Servizio, type Tariffa } from "../../types/servizi";
+import { ETICHETTE_REGIME, type Prestazione, type Regime, type Servizio, type Tariffa } from "../../types/servizi";
 import type { Slot } from "../../types/prenotazioni";
 import type { Paziente } from "../../types/pazienti";
 import { CalendarioSlot } from "./CalendarioSlot";
@@ -69,7 +69,7 @@ export function StepperPrenotazione({
   const [caricamentoSlot, setCaricamentoSlot] = useState(false);
   const [slot, setSlot] = useState<Slot | null>(null);
 
-  const [regime, setRegime] = useState<number | null>(null);
+  const [regime, setRegime] = useState<Regime | null>(null);
   const [note, setNote] = useState("");
 
   const [invio, setInvio] = useState(false);
@@ -267,7 +267,7 @@ export function StepperPrenotazione({
             {dayjs(slot.dataOraInizio).format("DD/MM/YYYY HH:mm")} – {dayjs(slot.dataOraFine).format("HH:mm")}
           </Descriptions.Item>
           <Descriptions.Item label="Regime">
-            {regime !== null && ETICHETTE_REGIME[regime as Tariffa["regime"]]}
+            {regime !== null && ETICHETTE_REGIME[regime]}
             {tariffaScelta && ` — € ${tariffaScelta.prezzo.toFixed(2)}`}
           </Descriptions.Item>
           <Descriptions.Item label="Note">{note.trim() || "—"}</Descriptions.Item>

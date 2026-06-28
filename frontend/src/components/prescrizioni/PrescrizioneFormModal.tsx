@@ -8,6 +8,8 @@ import { getPrenotazioniAgenda } from "../../api/prenotazioni";
 import { getErrorMessage } from "../../api/client";
 import type { Prenotazione } from "../../types/prenotazioni";
 import { TipoPrescrizione, type RigaPrescrizione } from "../../types/prescrizioni";
+import type { SuggerimentoOpzione } from "../../types/ai";
+import { PannelloAssistenteAi } from "./PannelloAssistenteAi";
 
 interface Props {
   open: boolean;
@@ -33,9 +35,23 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
   const [errore, setErrore] = useState("");
   const [agenda, setAgenda] = useState<Prenotazione[]>([]);
   const [caricamentoPazienti, setCaricamentoPazienti] = useState(false);
+  const [originAssistita, setOriginAssistita] = useState(false);
 
   const tipo = Form.useWatch("tipo", form);
+  const pazienteId = Form.useWatch("pazienteId", form);
   const isPianoTerapeutico = tipo === TipoPrescrizione.PianoTerapeutico;
+
+  // La provenienza riflette se la bozza è nata da una proposta dell'assistente: resta tale
+  // anche se il medico modifica poi i campi precompilati (provenienza, non contenuto).
+  const handleApplicaSuggerimento = (opzione: SuggerimentoOpzione) => {
+    form.setFieldsValue({
+      righe: opzione.righe,
+      diagnosi: opzione.diagnosiSuggerita ?? undefined,
+      durataGiorni: opzione.durataGiorni ?? undefined,
+      monitoraggio: opzione.monitoraggio ?? undefined,
+    });
+    setOriginAssistita(true);
+  };
 
   // L'elenco dei pazienti selezionabili è derivato dall'agenda del medico (prenotazioni sui
   // suoi turni): coincide con la regola backend "almeno una prenotazione pregressa", così non
@@ -43,6 +59,7 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
   useEffect(() => {
     if (!open) return;
     setErrore("");
+    setOriginAssistita(false);
     form.resetFields();
     form.setFieldsValue({
       tipo: TipoPrescrizione.Farmacologica,
@@ -94,6 +111,7 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
         dataEmissione: values.dataEmissione.format("YYYY-MM-DD"),
         dataScadenza: values.dataScadenza.format("YYYY-MM-DD"),
         note: values.note?.trim() ? values.note : undefined,
+        originAssistita,
         righe: values.righe,
       });
       onCreata();
@@ -126,9 +144,6 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
         />
       )}
 
-      {/* Spazio riservato all'assistenza alla redazione clinica (card di suggerimento):
-          al passo successivo popolerà diagnosi e righe dei farmaci tramite form.setFieldsValue. */}
-
       <Form form={form} layout="vertical">
         <Form.Item name="tipo" label="Tipo">
           <Segmented
@@ -152,6 +167,8 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
             optionFilterProp="label"
           />
         </Form.Item>
+
+        <PannelloAssistenteAi pazienteId={pazienteId} tipo={tipo} onApplica={handleApplicaSuggerimento} />
 
         <Form.Item
           name="diagnosi"
@@ -205,7 +222,7 @@ export function PrescrizioneFormModal({ open, onClose, onCreata }: Props) {
           </Form.Item>
         )}
 
-        <Divider orientation="left" style={{ margin: "8px 0 16px" }}>
+        <Divider titlePlacement="left" style={{ margin: "8px 0 16px" }}>
           Farmaci
         </Divider>
 

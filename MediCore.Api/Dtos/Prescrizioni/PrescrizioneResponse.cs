@@ -17,5 +17,6 @@ public record PrescrizioneResponse
     public DateOnly DataScadenza { get; init; }
     public string? Note { get; init; }
     public bool NotificaInviata { get; init; }
+    public bool OriginAssistita { get; init; }
     public IReadOnlyList<RigaPrescrizioneResponse> Righe { get; init; } = [];
 }

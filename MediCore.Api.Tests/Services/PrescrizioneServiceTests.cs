@@ -112,8 +112,30 @@ public class PrescrizioneServiceTests
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.NotNull(prescrizione);
         Assert.True(prescrizione!.NotificaInviata);
+        Assert.False(prescrizione.OriginAssistita);
         Assert.Single(prescrizione.Righe);
         Assert.Equal("Aspirina 100mg", prescrizione.Righe[0].Farmaco);
+    }
+
+    [Fact]
+    public async Task CreateAsync_con_OriginAssistita_true_mantiene_la_provenienza()
+    {
+        var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
+        var service = new PrescrizioneService(db);
+        var request = new PrescrizioneRequest
+        {
+            PazienteId = paziente.PazienteId,
+            Tipo = TipoPrescrizione.Farmacologica,
+            DataEmissione = DateOnly.FromDateTime(DateTime.Now),
+            DataScadenza = DateOnly.FromDateTime(DateTime.Now.AddDays(30)),
+            OriginAssistita = true,
+            Righe = RigheValide()
+        };
+
+        var (esito, prescrizione) = await service.CreateAsync(request, medico.UserId);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.True(prescrizione!.OriginAssistita);
     }
 
     [Fact]

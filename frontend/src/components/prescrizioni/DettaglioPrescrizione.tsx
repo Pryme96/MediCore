@@ -32,6 +32,19 @@ export function DettaglioPrescrizione({ prescrizione, mostraMedico = false, onCh
                 {ETICHETTE_TIPO_PRESCRIZIONE[prescrizione.tipo]}
               </Tag>
             </Descriptions.Item>
+            {prescrizione.originAssistita && (
+              <Descriptions.Item label="Redazione">
+                {mostraMedico ? (
+                  // Vista Paziente: formula neutra, non allarmante (trasparenza).
+                  <span>
+                    Redatta dal medico con il supporto di uno strumento di assistenza alla
+                    redazione. La responsabilità clinica resta del medico.
+                  </span>
+                ) : (
+                  <Tag color="geekblue">Con assistenza alla redazione</Tag>
+                )}
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="Paziente">{prescrizione.pazienteNomeCompleto}</Descriptions.Item>
             {mostraMedico && (
               <Descriptions.Item label="Medico">{prescrizione.medicoNomeCompleto}</Descriptions.Item>

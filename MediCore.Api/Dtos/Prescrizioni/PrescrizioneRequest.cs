@@ -13,5 +13,7 @@ public record PrescrizioneRequest
     public int? DurataGiorni { get; init; }
     public string? Monitoraggio { get; init; }
     public string? Note { get; init; }
+    // true se la bozza nasce dall'assistenza AI alla redazione (impostato dal frontend).
+    public bool OriginAssistita { get; init; }
     public IReadOnlyList<RigaPrescrizioneRequest> Righe { get; init; } = [];
 }
