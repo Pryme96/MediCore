@@ -29,7 +29,7 @@ interface MenuVoce {
 const VOCI_MENU: MenuVoce[] = [
   { key: "gestione-servizi", label: "Gestione Servizi", path: "/gestione-servizi", icona: <AppstoreOutlined />, ruoli: ["Amministratore"] },
   { key: "servizi", label: "Servizi", path: "/servizi", icona: <MedicineBoxOutlined />, ruoli: ["Paziente", "Medico"] },
-  { key: "prenotazioni", label: "Prenotazioni", path: "/prenotazioni", icona: <CalendarOutlined /> },
+  { key: "prenotazioni", label: "Prenotazioni", path: "/prenotazioni", icona: <CalendarOutlined />, ruoli: ["Paziente"] },
   { key: "prescrizioni", label: "Prescrizioni", path: "/prescrizioni", icona: <FileTextOutlined /> },
   { key: "referti", label: "Referti", path: "/referti", icona: <FilePdfOutlined /> },
   { key: "fatture", label: "Fatture", path: "/fatture", icona: <EuroCircleOutlined /> },
