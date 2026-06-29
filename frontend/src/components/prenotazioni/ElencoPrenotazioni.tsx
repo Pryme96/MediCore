@@ -26,6 +26,7 @@ const COLORE_STATO: Record<StatoPrenotazione, string> = {
   [StatoPrenotazione.Annullata]: "default",
   [StatoPrenotazione.Completata]: "blue",
   [StatoPrenotazione.NonPresentato]: "red",
+  [StatoPrenotazione.Erogata]: "gold",
 };
 
 const OPZIONI_VISTA = [
@@ -36,6 +37,10 @@ const OPZIONI_VISTA = [
 interface ElencoPrenotazioniProps {
   prenotazioni: Prenotazione[];
   onAnnulla: (p: Prenotazione) => void;
+  // Medico: attesta l'erogazione della visita (Confermata -> Erogata).
+  onEroga?: (p: Prenotazione) => void;
+  // Amministratore: genera la fattura e finalizza (Erogata -> Completata).
+  onCompleta?: (p: Prenotazione) => void;
   // Mostra la colonna Medico e lo include nella ricerca (vista Amministratore).
   mostraMedico?: boolean;
   emptyText: string;
@@ -44,6 +49,8 @@ interface ElencoPrenotazioniProps {
 export function ElencoPrenotazioni({
   prenotazioni,
   onAnnulla,
+  onEroga,
+  onCompleta,
   mostraMedico = false,
   emptyText,
 }: ElencoPrenotazioniProps) {
@@ -165,19 +172,46 @@ export function ElencoPrenotazioni({
             {
               title: "Azioni",
               key: "azioni",
-              render: (_: unknown, p: Prenotazione) =>
-                p.stato === StatoPrenotazione.Confermata ? (
-                  <Popconfirm
-                    title="Annullare la prenotazione?"
-                    okText="Annulla prenotazione"
-                    cancelText="No"
-                    onConfirm={() => onAnnulla(p)}
-                  >
-                    <Button size="small" danger>
-                      Annulla
-                    </Button>
-                  </Popconfirm>
-                ) : null,
+              render: (_: unknown, p: Prenotazione) => (
+                <Space>
+                  {onEroga && p.stato === StatoPrenotazione.Confermata && (
+                    <Popconfirm
+                      title="Segnare la visita come erogata?"
+                      okText="Segna erogata"
+                      cancelText="No"
+                      onConfirm={() => onEroga(p)}
+                    >
+                      <Button size="small" type="primary">
+                        Segna erogata
+                      </Button>
+                    </Popconfirm>
+                  )}
+                  {onCompleta && p.stato === StatoPrenotazione.Erogata && (
+                    <Popconfirm
+                      title="Generare la fattura e completare la prenotazione?"
+                      okText="Genera fattura"
+                      cancelText="No"
+                      onConfirm={() => onCompleta(p)}
+                    >
+                      <Button size="small" type="primary">
+                        Genera fattura
+                      </Button>
+                    </Popconfirm>
+                  )}
+                  {p.stato === StatoPrenotazione.Confermata && (
+                    <Popconfirm
+                      title="Annullare la prenotazione?"
+                      okText="Annulla prenotazione"
+                      cancelText="No"
+                      onConfirm={() => onAnnulla(p)}
+                    >
+                      <Button size="small" danger>
+                        Annulla
+                      </Button>
+                    </Popconfirm>
+                  )}
+                </Space>
+              ),
             },
           ]}
         />

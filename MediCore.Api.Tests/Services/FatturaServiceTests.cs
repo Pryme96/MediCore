@@ -149,4 +149,17 @@ public class FatturaServiceTests
         Assert.Single(mie);
         Assert.Equal(paziente.PazienteId, mie[0].PazienteId);
     }
+
+    [Fact]
+    public async Task GetAllAsync_restituisce_tutte_le_fatture()
+    {
+        var (db, _, paziente, fattura) = await SetupAsync();
+        var service = new FatturaService(db);
+
+        var tutte = await service.GetAllAsync();
+
+        Assert.Single(tutte);
+        Assert.Equal(fattura.FatturaId, tutte[0].Id);
+        Assert.Equal(paziente.PazienteId, tutte[0].PazienteId);
+    }
 }

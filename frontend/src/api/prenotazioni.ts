@@ -29,3 +29,13 @@ export const createPrenotazione = async (data: PrenotazioneInput): Promise<Preno
 export const annullaPrenotazione = async (id: string): Promise<void> => {
   await apiClient.put(`/prenotazioni/${id}/annulla`);
 };
+
+// Erogazione della visita da parte del medico (o admin): porta la prenotazione a Erogata.
+export const erogaPrenotazione = async (id: string): Promise<void> => {
+  await apiClient.put(`/prenotazioni/${id}/eroga`);
+};
+
+// Completamento amministrativo: genera la fattura e porta la prenotazione a Completata.
+export const completaPrenotazione = async (id: string): Promise<void> => {
+  await apiClient.put(`/prenotazioni/${id}/completa`);
+};

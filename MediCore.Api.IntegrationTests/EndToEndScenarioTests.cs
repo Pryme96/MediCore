@@ -583,16 +583,30 @@ public class EndToEndScenarioTests
         var secondaPrenotazione = await secondaPrenotazioneResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
         Assert.NotNull(secondaPrenotazione);
 
-        // 30. Il Paziente NON può completare la propria Prenotazione (solo Medico titolare o Amministratore).
-        var completaComePazienteResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione!.Id}/completa", null);
-        Assert.Equal(HttpStatusCode.Forbidden, completaComePazienteResponse.StatusCode);
+        // 30. Il Paziente NON può erogare la propria Prenotazione (eroga riservato a Medico/Amministratore).
+        var erogaComePazienteResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione!.Id}/eroga", null);
+        Assert.Equal(HttpStatusCode.Forbidden, erogaComePazienteResponse.StatusCode);
 
-        // 31. Il Medico titolare completa la Prenotazione: viene generata la Fattura dalla Tariffa Privato/80.
+        // 30bis. L'Amministratore non può completare una Prenotazione non ancora erogata -> 409.
+        client.UseToken(tokenAdmin);
+        var completaNonErogataResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.Conflict, completaNonErogataResponse.StatusCode);
+
+        // 31. Il Medico titolare eroga la Prenotazione (attestazione clinica): 204, nessuna Fattura ancora.
         client.UseToken(tokenMedico);
+        var erogaResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/eroga", null);
+        Assert.Equal(HttpStatusCode.NoContent, erogaResponse.StatusCode);
+
+        // 31bis. Il Medico NON può completare/fatturare (completa riservato all'Amministratore) -> 403.
+        var completaComeMedicoResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
+        Assert.Equal(HttpStatusCode.Forbidden, completaComeMedicoResponse.StatusCode);
+
+        // 31ter. L'Amministratore completa la Prenotazione erogata: viene generata la Fattura dalla Tariffa Privato/80.
+        client.UseToken(tokenAdmin);
         var completaResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
         Assert.Equal(HttpStatusCode.NoContent, completaResponse.StatusCode);
 
-        // 31bis. Completare due volte la stessa Prenotazione -> 409.
+        // 31quater. Completare due volte la stessa Prenotazione -> 409.
         var completaDuplicataResponse = await client.PutAsync<object?>($"prenotazioni/{secondaPrenotazione.Id}/completa", null);
         Assert.Equal(HttpStatusCode.Conflict, completaDuplicataResponse.StatusCode);
 
@@ -609,7 +623,18 @@ public class EndToEndScenarioTests
         var getFatturaComeMedicoResponse = await client.GetAsync($"fatture/{fatturaGenerata.Id}");
         Assert.Equal(HttpStatusCode.OK, getFatturaComeMedicoResponse.StatusCode);
 
-        // 34. Prenotazione con Regime senza Tariffa configurata (Assicurativo): il completamento -> 400.
+        // 33bis. GET /fatture come Amministratore restituisce l'elenco completo; Paziente -> 403.
+        client.UseToken(tokenAdmin);
+        var getTutteFattureResponse = await client.GetAsync("fatture");
+        Assert.Equal(HttpStatusCode.OK, getTutteFattureResponse.StatusCode);
+        var tutteFatture = await getTutteFattureResponse.Content.ReadFromJsonAsync<List<FatturaResponse>>();
+        Assert.Contains(tutteFatture!, f => f.Id == fatturaGenerata.Id);
+        client.UseToken(tokenPaziente);
+        var getTutteFattureComePazienteResponse = await client.GetAsync("fatture");
+        Assert.Equal(HttpStatusCode.Forbidden, getTutteFattureComePazienteResponse.StatusCode);
+
+        // 34. Prenotazione con Regime senza Tariffa configurata (Assicurativo): erogata dal Medico,
+        // il completamento da parte dell'Amministratore -> 400 (nessuna Tariffa).
         client.UseToken(tokenPaziente);
         var terzaPrenotazioneResponse = await client.PostAsync("prenotazioni", new
         {
@@ -618,7 +643,10 @@ public class EndToEndScenarioTests
         });
         var terzaPrenotazione = await terzaPrenotazioneResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
         client.UseToken(tokenMedico);
-        var completaSenzaTariffaResponse = await client.PutAsync<object?>($"prenotazioni/{terzaPrenotazione!.Id}/completa", null);
+        var erogaTerzaResponse = await client.PutAsync<object?>($"prenotazioni/{terzaPrenotazione!.Id}/eroga", null);
+        Assert.Equal(HttpStatusCode.NoContent, erogaTerzaResponse.StatusCode);
+        client.UseToken(tokenAdmin);
+        var completaSenzaTariffaResponse = await client.PutAsync<object?>($"prenotazioni/{terzaPrenotazione.Id}/completa", null);
         Assert.Equal(HttpStatusCode.BadRequest, completaSenzaTariffaResponse.StatusCode);
 
         // 35. GET /pazienti è riservato agli operatori (Amministratore/Medico) -> 200; Paziente -> 403.
@@ -700,7 +728,9 @@ public class EndToEndScenarioTests
         Assert.Equal(HttpStatusCode.Forbidden, suggerisciComePazienteResponse.StatusCode);
 
         // 41. Il Medico ottiene suggerimenti per il paziente con cui ha una prenotazione pregressa.
-        // Nessuna chiave Mistral configurata in test -> modalità demo (Demo = true), nessuna chiamata di rete.
+        // I test di integrazione girano con il server in modalità demo (Mistral:DemoMode=true): l'assistenza
+        // restituisce lo stub deterministico senza chiamare il modello reale (nessuna rete, nessun costo).
+        // Demo deve quindi risultare true; se fallisce qui, il server non è stato avviato in modalità demo.
         client.UseToken(tokenMedico);
         var suggerisciResponse = await client.PostAsync("ai/suggerisci", new
         {

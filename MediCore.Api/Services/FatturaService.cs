@@ -37,6 +37,16 @@ public class FatturaService(AppDbContext db) : IFatturaService
         return fatture.Select(ToResponse).ToList();
     }
 
+    public async Task<IReadOnlyList<FatturaResponse>> GetAllAsync()
+    {
+        var fatture = await db.Fatture.AsNoTracking()
+            .Include(f => f.Paziente).ThenInclude(p => p.User)
+            .OrderByDescending(f => f.DataEmissione)
+            .ToListAsync();
+
+        return fatture.Select(ToResponse).ToList();
+    }
+
     private static bool PuoAccedere(Fattura fattura, string userId, bool isAdmin) =>
         isAdmin || fattura.Paziente.UserId == userId || fattura.Prenotazione.Slot.Turno.Medico.UserId == userId;
 

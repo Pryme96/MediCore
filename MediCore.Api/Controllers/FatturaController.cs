@@ -29,6 +29,11 @@ public class FatturaController(IFatturaService fatturaService) : ControllerBase
     public async Task<ActionResult<IReadOnlyList<FatturaResponse>>> GetMie() =>
         Ok(await fatturaService.GetMieAsync(UserId));
 
+    [HttpGet]
+    [Authorize(Roles = AppRoles.Amministratore)]
+    public async Task<ActionResult<IReadOnlyList<FatturaResponse>>> GetAll() =>
+        Ok(await fatturaService.GetAllAsync());
+
     private string UserId => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
     private bool IsAdmin => User.IsInRole(AppRoles.Amministratore);
 }

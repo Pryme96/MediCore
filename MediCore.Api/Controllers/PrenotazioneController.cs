@@ -64,13 +64,25 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
             _ => BadRequest()
         };
 
-    [HttpPut("{id:guid}/completa")]
-    public async Task<IActionResult> Completa(Guid id) =>
-        await prenotazioneService.CompletaAsync(id, UserId, IsAdmin) switch
+    [HttpPut("{id:guid}/eroga")]
+    [Authorize(Roles = $"{AppRoles.Medico},{AppRoles.Amministratore}")]
+    public async Task<IActionResult> Eroga(Guid id) =>
+        await prenotazioneService.ErogaAsync(id, UserId, IsAdmin) switch
         {
             EsitoOperazione.Ok => NoContent(),
             EsitoOperazione.NonTrovato => NotFound(),
             EsitoOperazione.NonAutorizzato => Forbid(),
+            EsitoOperazione.Conflitto => Conflict("La prenotazione non è erogabile."),
+            _ => BadRequest()
+        };
+
+    [HttpPut("{id:guid}/completa")]
+    [Authorize(Roles = AppRoles.Amministratore)]
+    public async Task<IActionResult> Completa(Guid id) =>
+        await prenotazioneService.CompletaAsync(id) switch
+        {
+            EsitoOperazione.Ok => NoContent(),
+            EsitoOperazione.NonTrovato => NotFound(),
             EsitoOperazione.Conflitto => Conflict("La prenotazione non è completabile."),
             EsitoOperazione.RiferimentoNonValido => BadRequest("Nessuna tariffa configurata per questa prestazione e questo regime."),
             _ => BadRequest()

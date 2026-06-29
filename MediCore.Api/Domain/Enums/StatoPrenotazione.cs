@@ -6,5 +6,7 @@ public enum StatoPrenotazione
     Confermata = 1,
     Annullata = 2,
     Completata = 3,
-    NonPresentato = 4
+    NonPresentato = 4,
+    // Visita erogata dal medico, in attesa di fatturazione da parte dell'amministratore.
+    Erogata = 5
 }

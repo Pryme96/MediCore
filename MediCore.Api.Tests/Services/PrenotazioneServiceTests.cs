@@ -310,14 +310,57 @@ public class PrenotazioneServiceTests
     }
 
     [Fact]
-    public async Task CompletaAsync_dal_medico_titolare_genera_la_Fattura()
+    public async Task ErogaAsync_dal_medico_titolare_imposta_Erogata_senza_generare_Fattura()
+    {
+        var (db, medico, paziente, slot) = await SetupConTariffaAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var esito = await service.ErogaAsync(creata!.Id, medico.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.Equal(StatoPrenotazione.Erogata, (await db.Prenotazioni.FindAsync(creata.Id))!.Stato);
+        Assert.False(await db.Fatture.AnyAsync(f => f.PrenotazioneId == creata.Id));
+    }
+
+    [Fact]
+    public async Task ErogaAsync_da_medico_non_titolare_restituisce_NonAutorizzato()
+    {
+        var (db, _, paziente, slot) = await SetupConTariffaAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var esito = await service.ErogaAsync(creata!.Id, "medico-estraneo", isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.NonAutorizzato, esito);
+    }
+
+    [Fact]
+    public async Task ErogaAsync_su_prenotazione_non_confermata_restituisce_Conflitto()
+    {
+        var (db, medico, paziente, slot) = await SetupConTariffaAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+        await service.ErogaAsync(creata!.Id, medico.UserId, isAdmin: false);
+
+        var esito = await service.ErogaAsync(creata.Id, medico.UserId, isAdmin: false);
+
+        Assert.Equal(EsitoOperazione.Conflitto, esito);
+    }
+
+    [Fact]
+    public async Task CompletaAsync_su_prenotazione_erogata_genera_la_Fattura()
     {
         var (db, medico, paziente, slot) = await SetupConTariffaAsync(prezzo: 80);
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
             new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+        await service.ErogaAsync(creata!.Id, medico.UserId, isAdmin: false);
 
-        var esito = await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
+        var esito = await service.CompletaAsync(creata.Id);
 
         Assert.Equal(EsitoOperazione.Ok, esito);
         Assert.Equal(StatoPrenotazione.Completata, (await db.Prenotazioni.FindAsync(creata.Id))!.Stato);
@@ -327,16 +370,17 @@ public class PrenotazioneServiceTests
     }
 
     [Fact]
-    public async Task CompletaAsync_da_medico_non_titolare_restituisce_NonAutorizzato()
+    public async Task CompletaAsync_su_prenotazione_non_erogata_restituisce_Conflitto()
     {
         var (db, _, paziente, slot) = await SetupConTariffaAsync();
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
             new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
 
-        var esito = await service.CompletaAsync(creata!.Id, "medico-estraneo", isAdmin: false);
+        // Ancora Confermata, non Erogata: non è completabile.
+        var esito = await service.CompletaAsync(creata!.Id);
 
-        Assert.Equal(EsitoOperazione.NonAutorizzato, esito);
+        Assert.Equal(EsitoOperazione.Conflitto, esito);
     }
 
     [Fact]
@@ -348,8 +392,9 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
             new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+        await service.ErogaAsync(creata!.Id, medico.UserId, isAdmin: false);
 
-        var esito = await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
+        var esito = await service.CompletaAsync(creata.Id);
 
         Assert.Equal(EsitoOperazione.RiferimentoNonValido, esito);
     }
@@ -361,9 +406,10 @@ public class PrenotazioneServiceTests
         var service = new PrenotazioneService(db);
         var (_, creata) = await service.CreateAsync(
             new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
-        await service.CompletaAsync(creata!.Id, medico.UserId, isAdmin: false);
+        await service.ErogaAsync(creata!.Id, medico.UserId, isAdmin: false);
+        await service.CompletaAsync(creata.Id);
 
-        var esito = await service.CompletaAsync(creata.Id, medico.UserId, isAdmin: false);
+        var esito = await service.CompletaAsync(creata.Id);
 
         Assert.Equal(EsitoOperazione.Conflitto, esito);
     }

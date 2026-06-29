@@ -5,7 +5,6 @@ import { AppLayout } from "./layout/AppLayout";
 import { Login } from "./pages/Login";
 import { Register } from "./pages/Register";
 import { Home } from "./pages/Home";
-import { PlaceholderPage } from "./pages/PlaceholderPage";
 import { Servizi } from "./pages/Servizi";
 import { GestioneServizi } from "./pages/GestioneServizi";
 import { Medici } from "./pages/Medici";
@@ -13,6 +12,7 @@ import { Turni } from "./pages/Turni";
 import { Prenotazioni } from "./pages/Prenotazioni";
 import { Prescrizioni } from "./pages/Prescrizioni";
 import { Referti } from "./pages/Referti";
+import { Fatture } from "./pages/Fatture";
 
 function App() {
   return (
@@ -55,7 +55,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="fatture" element={<PlaceholderPage titolo="Fatture" />} />
+            <Route
+              path="fatture"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Paziente", "Amministratore"]}>
+                  <Fatture />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="medici"
               element={

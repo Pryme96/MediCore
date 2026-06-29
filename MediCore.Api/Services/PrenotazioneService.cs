@@ -167,7 +167,9 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         return EsitoOperazione.Ok;
     }
 
-    public async Task<EsitoOperazione> CompletaAsync(Guid id, string userId, bool isAdmin)
+    // Erogazione della visita: attestazione clinica da parte del medico titolare (o dell'admin).
+    // Porta la prenotazione da Confermata a Erogata, senza generare la fattura.
+    public async Task<EsitoOperazione> ErogaAsync(Guid id, string userId, bool isAdmin)
     {
         var prenotazione = await db.Prenotazioni
             .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico)
@@ -179,6 +181,25 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
             return EsitoOperazione.NonAutorizzato;
 
         if (prenotazione.Stato != StatoPrenotazione.Confermata)
+            return EsitoOperazione.Conflitto;
+
+        prenotazione.Stato = StatoPrenotazione.Erogata;
+        await db.SaveChangesAsync();
+
+        return EsitoOperazione.Ok;
+    }
+
+    // Finalizzazione amministrativa: genera la fattura e porta la prenotazione a Completata.
+    // Riservata all'amministratore (vincolo di ruolo applicato dal controller).
+    public async Task<EsitoOperazione> CompletaAsync(Guid id)
+    {
+        var prenotazione = await db.Prenotazioni
+            .Include(p => p.Slot).ThenInclude(s => s.Turno).ThenInclude(t => t.Medico)
+            .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
+        if (prenotazione is null)
+            return EsitoOperazione.NonTrovato;
+
+        if (prenotazione.Stato != StatoPrenotazione.Erogata)
             return EsitoOperazione.Conflitto;
 
         var tariffa = await db.Tariffe.FirstOrDefaultAsync(t =>

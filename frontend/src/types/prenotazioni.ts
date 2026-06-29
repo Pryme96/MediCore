@@ -14,6 +14,7 @@ export const StatoPrenotazione = {
   Annullata: 2,
   Completata: 3,
   NonPresentato: 4,
+  Erogata: 5,
 } as const;
 
 export type StatoPrenotazione = (typeof StatoPrenotazione)[keyof typeof StatoPrenotazione];
@@ -23,6 +24,7 @@ export const ETICHETTE_STATO_PRENOTAZIONE: Record<StatoPrenotazione, string> = {
   [StatoPrenotazione.Annullata]: "Annullata",
   [StatoPrenotazione.Completata]: "Completata",
   [StatoPrenotazione.NonPresentato]: "Non presentato",
+  [StatoPrenotazione.Erogata]: "Erogata",
 };
 
 export interface Prenotazione {

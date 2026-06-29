@@ -32,7 +32,7 @@ const VOCI_MENU: MenuVoce[] = [
   { key: "prenotazioni", label: "Prenotazioni", path: "/prenotazioni", icona: <CalendarOutlined />, ruoli: ["Paziente", "Amministratore", "Medico"] },
   { key: "prescrizioni", label: "Prescrizioni", path: "/prescrizioni", icona: <FileTextOutlined />, ruoli: ["Paziente", "Medico"] },
   { key: "referti", label: "Referti", path: "/referti", icona: <FilePdfOutlined />, ruoli: ["Paziente", "Medico"] },
-  { key: "fatture", label: "Fatture", path: "/fatture", icona: <EuroCircleOutlined /> },
+  { key: "fatture", label: "Fatture", path: "/fatture", icona: <EuroCircleOutlined />, ruoli: ["Paziente", "Amministratore"] },
   { key: "medici", label: "Medici", path: "/medici", icona: <TeamOutlined />, ruoli: ["Amministratore"] },
   { key: "turni", label: "Turni", path: "/turni", icona: <ScheduleOutlined />, ruoli: ["Amministratore", "Medico"] },
 ];

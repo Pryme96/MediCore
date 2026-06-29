@@ -6,6 +6,8 @@ import { useAuth } from "../auth/AuthContext";
 import { getErrorMessage } from "../api/client";
 import {
   annullaPrenotazione,
+  completaPrenotazione,
+  erogaPrenotazione,
   getPrenotazioniAgenda,
   getPrenotazioniMie,
   getPrenotazioniTutte,
@@ -24,6 +26,7 @@ const COLORE_STATO: Record<StatoPrenotazione, string> = {
   [StatoPrenotazione.Annullata]: "default",
   [StatoPrenotazione.Completata]: "blue",
   [StatoPrenotazione.NonPresentato]: "red",
+  [StatoPrenotazione.Erogata]: "gold",
 };
 
 export function Prenotazioni() {
@@ -181,6 +184,26 @@ function PrenotazioniOperatore({ variante }: { variante: "amministratore" | "med
     }
   };
 
+  const handleEroga = async (p: Prenotazione) => {
+    setErrore("");
+    try {
+      await erogaPrenotazione(p.id);
+      carica();
+    } catch (error) {
+      setErrore(getErrorMessage(error, "Impossibile segnare la visita come erogata."));
+    }
+  };
+
+  const handleCompleta = async (p: Prenotazione) => {
+    setErrore("");
+    try {
+      await completaPrenotazione(p.id);
+      carica();
+    } catch (error) {
+      setErrore(getErrorMessage(error, "Impossibile generare la fattura: verifica che sia configurata una tariffa per la prestazione e il regime."));
+    }
+  };
+
   if (modalita === "nuova") {
     return (
       <StepperPrenotazione
@@ -214,6 +237,8 @@ function PrenotazioniOperatore({ variante }: { variante: "amministratore" | "med
       <ElencoPrenotazioni
         prenotazioni={prenotazioni}
         onAnnulla={handleAnnulla}
+        onEroga={isAmministratore ? undefined : handleEroga}
+        onCompleta={isAmministratore ? handleCompleta : undefined}
         mostraMedico={isAmministratore}
         emptyText={
           isAmministratore ? "Nessuna prenotazione corrisponde ai filtri." : "Nessuna prenotazione sui tuoi turni."
