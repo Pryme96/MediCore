@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Alert, Collapse, List, Spin, Typography } from "antd";
+import { palette } from "../theme/colors";
 import { getErrorMessage } from "../api/client";
 import { getPrestazioniPerServizio, getServizi } from "../api/servizi";
 import type { Prestazione, Servizio } from "../types/servizi";
@@ -51,6 +52,7 @@ export function Servizi() {
         items={servizi.map((servizio) => ({
           key: servizio.id,
           label: servizio.nome,
+          styles: { header: { background: palette.backgroundTint } },
           children: prestazioniLoading[servizio.id] ? (
             <Spin size="small" />
           ) : (

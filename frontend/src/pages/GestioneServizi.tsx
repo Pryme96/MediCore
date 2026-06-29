@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Collapse, List, Space, Spin, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Alert, Button, Collapse, List, Space, Spin, Tooltip, Typography } from "antd";
+import { EditOutlined, EuroOutlined, PlusOutlined } from "@ant-design/icons";
+import { palette } from "../theme/colors";
 import { getErrorMessage } from "../api/client";
 import { getPrestazioniPerServizio, getServizi } from "../api/servizi";
 import type { Prestazione, Servizio } from "../types/servizi";
@@ -123,34 +124,35 @@ export function GestioneServizi() {
         items={servizi.map((servizio) => ({
           key: servizio.id,
           label: servizio.nome,
+          styles: { header: { background: palette.backgroundTint } },
           extra: (
-            <Button
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                setServizioModal({ open: true, servizio });
-              }}
-            >
-              Modifica
-            </Button>
+            <Space onClick={(e) => e.stopPropagation()}>
+              <Tooltip key="nuova-prestazione" title="Nuova prestazione">
+              <Button
+                type="primary"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() =>
+                  setPrestazioneModal({
+                    open: true,
+                    servizioId: servizio.id,
+                    prestazione: null,
+                  })
+                }
+              />
+              </Tooltip>
+              <Tooltip key="modifica" title="Modifica servizio">
+              <Button
+                type="text"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => setServizioModal({ open: true, servizio })}
+              />
+              </Tooltip>
+            </Space>
           ),
           children: (
             <>
-              <Space style={{ width: "100%", justifyContent: "flex-end", marginBottom: 8 }}>
-                <Button
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() =>
-                    setPrestazioneModal({
-                      open: true,
-                      servizioId: servizio.id,
-                      prestazione: null,
-                    })
-                  }
-                >
-                  Nuova prestazione
-                </Button>
-              </Space>
               {prestazioniLoading[servizio.id] ? (
                 <Spin size="small" />
               ) : (
@@ -160,26 +162,28 @@ export function GestioneServizi() {
                   renderItem={(prestazione) => (
                     <List.Item
                       actions={[
-                        <Button
-                          key="modifica"
-                          size="small"
-                          onClick={() =>
-                            setPrestazioneModal({
-                              open: true,
-                              servizioId: servizio.id,
-                              prestazione,
-                            })
-                          }
-                        >
-                          Modifica
-                        </Button>,
-                        <Button
-                          key="tariffe"
-                          size="small"
-                          onClick={() => setTariffeModal({ open: true, prestazione })}
-                        >
-                          Tariffe
-                        </Button>,
+                        <Tooltip key="modifica" title="Modifica prestazione">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EditOutlined />}
+                            onClick={() =>
+                              setPrestazioneModal({
+                                open: true,
+                                servizioId: servizio.id,
+                                prestazione,
+                              })
+                            }
+                          />
+                        </Tooltip>,
+                        <Tooltip key="tariffe" title="Gestisci tariffe">
+                          <Button
+                            type="text"
+                            size="small"
+                            icon={<EuroOutlined />}
+                            onClick={() => setTariffeModal({ open: true, prestazione })}
+                          />
+                        </Tooltip>,
                       ]}
                     >
                       <List.Item.Meta

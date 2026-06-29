@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Badge, Button, Calendar, Empty, Select, Space, Typography } from "antd";
+import { Button, Calendar, Empty, Select, Space, Tag, Typography } from "antd";
 import dayjs, { type Dayjs } from "dayjs";
 import type { Slot } from "../../types/prenotazioni";
+import { palette } from "../../theme/colors";
 
 interface CalendarioSlotProps {
   slots: Slot[];
@@ -77,7 +78,17 @@ export function CalendarioSlot({ slots, slotSelezionato, onSelect }: CalendarioS
         }}
         cellRender={(data) => {
           const quanti = slotPerGiorno.get(chiaveGiorno(data))?.length ?? 0;
-          return quanti > 0 ? <Badge status="success" /> : null;
+          if (quanti === 0) return null;
+          return (
+            <div style={{ textAlign: "center", marginTop: 2 }}>
+              <Tag
+                color={palette.primary}
+                style={{ fontSize: 11, padding: "0 4px", margin: 0, lineHeight: "18px" }}
+              >
+                {quanti} slot
+              </Tag>
+            </div>
+          );
         }}
       />
 
@@ -90,20 +101,32 @@ export function CalendarioSlot({ slots, slotSelezionato, onSelect }: CalendarioS
           <Typography.Text type="secondary">Nessun orario disponibile in questo giorno.</Typography.Text>
         ) : (
           <>
-            <Typography.Title level={5}>
-              Orari disponibili — {giornoSelezionato.format("DD/MM/YYYY")}
+            <Typography.Title level={5} style={{ marginBottom: 12 }}>
+              {(() => {
+                const s = giornoSelezionato.format("dddd D MMMM YYYY");
+                return s.charAt(0).toUpperCase() + s.slice(1);
+              })()}
             </Typography.Title>
-            <Space wrap>
-              {slotDelGiorno.map((slot) => (
-                <Button
-                  key={slot.id}
-                  type={slotSelezionato?.id === slot.id ? "primary" : "default"}
-                  onClick={() => onSelect(slot)}
-                >
-                  {dayjs(slot.dataOraInizio).format("HH:mm")} — {slot.medicoNomeCompleto}
-                </Button>
-              ))}
-            </Space>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {slotDelGiorno.map((slot) => {
+                const selezionato = slotSelezionato?.id === slot.id;
+                return (
+                  <Button
+                    key={slot.id}
+                    type={selezionato ? "primary" : "default"}
+                    onClick={() => onSelect(slot)}
+                    style={{ height: "auto", padding: "8px 16px", textAlign: "left", minWidth: 160 }}
+                  >
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>
+                      {dayjs(slot.dataOraInizio).format("HH:mm")}
+                    </div>
+                    <div style={{ fontSize: 12, marginTop: 2, opacity: 0.85 }}>
+                      {slot.medicoNomeCompleto}
+                    </div>
+                  </Button>
+                );
+              })}
+            </div>
           </>
         )}
       </div>

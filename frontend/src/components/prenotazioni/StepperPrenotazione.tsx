@@ -10,9 +10,11 @@ import {
   Space,
   Spin,
   Steps,
+  Tooltip,
   Typography,
   message,
 } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { getErrorMessage } from "../../api/client";
 import { palette } from "../../theme/colors";
@@ -156,7 +158,9 @@ export function StepperPrenotazione({
         <Typography.Title level={3} style={{ margin: 0 }}>
           {modalitaOperatore ? "Prenota per un paziente" : "Prenota una visita"}
         </Typography.Title>
-        <Button onClick={onAnnulla}>Torna alle prenotazioni</Button>
+        <Tooltip title="Torna alle prenotazioni">
+          <Button icon={<ArrowLeftOutlined />} onClick={onAnnulla} />
+        </Tooltip>
       </Space>
 
       <Steps current={passo} items={chiavi.map((c) => ({ title: TITOLI_PASSO[c] }))} style={{ marginBottom: 24 }} />
@@ -184,7 +188,7 @@ export function StepperPrenotazione({
       )}
 
       {chiave === "servizio" && (
-        <Space wrap>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
           {servizi.map((s) => (
             <Card
               key={s.id}
@@ -195,14 +199,14 @@ export function StepperPrenotazione({
               <Card.Meta title={s.nome} description={s.descrizione} />
             </Card>
           ))}
-        </Space>
+        </div>
       )}
 
       {chiave === "prestazione" &&
         (caricamentoPrestazioni ? (
           <Spin />
         ) : (
-          <Space wrap>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {prestazioni.map((p) => (
               <Card
                 key={p.id}
@@ -213,7 +217,7 @@ export function StepperPrenotazione({
                 <Card.Meta title={p.nome} description={`${p.descrizione} — ${p.durataMinuti} min`} />
               </Card>
             ))}
-          </Space>
+          </div>
         ))}
 
       {chiave === "slot" &&

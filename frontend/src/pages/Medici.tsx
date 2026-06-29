@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Popconfirm, Space, Spin, Table, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Alert, Button, Popconfirm, Space, Spin, Table, Tooltip, Typography } from "antd";
+import { EditOutlined, LockOutlined, PlusOutlined } from "@ant-design/icons";
 import { getErrorMessage } from "../api/client";
 import { getMedici, resetPasswordMedico } from "../api/medici";
 import { getServizi } from "../api/servizi";
@@ -110,9 +110,14 @@ export function Medici() {
             key: "azioni",
             render: (_, medico) => (
               <Space>
-                <Button size="small" onClick={() => setFormModal({ open: true, medico })}>
-                  Modifica
-                </Button>
+                <Tooltip title="Modifica medico">
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => setFormModal({ open: true, medico })}
+                  />
+                </Tooltip>
                 <Popconfirm
                   title="Reimpostare la password?"
                   description="La password attuale non sarà più valida."
@@ -120,7 +125,9 @@ export function Medici() {
                   cancelText="Annulla"
                   onConfirm={() => handleResetPassword(medico)}
                 >
-                  <Button size="small">Reset password</Button>
+                  <Tooltip title="Reset password">
+                    <Button type="text" size="small" icon={<LockOutlined />} />
+                  </Tooltip>
                 </Popconfirm>
               </Space>
             ),

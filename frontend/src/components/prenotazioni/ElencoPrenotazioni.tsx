@@ -9,9 +9,10 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
-import { ReloadOutlined } from "@ant-design/icons";
+import { CheckCircleOutlined, FileTextOutlined, ReloadOutlined, StopOutlined } from "@ant-design/icons";
 import dayjs, { type Dayjs } from "dayjs";
 import {
   ETICHETTE_STATO_PRENOTAZIONE,
@@ -165,8 +166,15 @@ export function ElencoPrenotazioni({
             {
               title: "Stato",
               dataIndex: "stato",
-              render: (stato: StatoPrenotazione) => (
-                <Tag color={COLORE_STATO[stato]}>{ETICHETTE_STATO_PRENOTAZIONE[stato]}</Tag>
+              render: (stato: StatoPrenotazione, p: Prenotazione) => (
+                <Space size={4} wrap>
+                  <Tag color={COLORE_STATO[stato]}>{ETICHETTE_STATO_PRENOTAZIONE[stato]}</Tag>
+                  {stato === StatoPrenotazione.Confermata && (
+                    p.confermataDalPaziente
+                      ? <Tag color="success">Presenza confermata</Tag>
+                      : <Tag color="warning">In attesa di conferma</Tag>
+                  )}
+                </Space>
               ),
             },
             {
@@ -181,9 +189,9 @@ export function ElencoPrenotazioni({
                       cancelText="No"
                       onConfirm={() => onEroga(p)}
                     >
-                      <Button size="small" type="primary">
-                        Segna erogata
-                      </Button>
+                      <Tooltip title="Segna erogata">
+                        <Button size="small" type="primary" icon={<CheckCircleOutlined />} />
+                      </Tooltip>
                     </Popconfirm>
                   )}
                   {onCompleta && p.stato === StatoPrenotazione.Erogata && (
@@ -193,9 +201,9 @@ export function ElencoPrenotazioni({
                       cancelText="No"
                       onConfirm={() => onCompleta(p)}
                     >
-                      <Button size="small" type="primary">
-                        Genera fattura
-                      </Button>
+                      <Tooltip title="Genera fattura">
+                        <Button size="small" type="primary" icon={<FileTextOutlined />} />
+                      </Tooltip>
                     </Popconfirm>
                   )}
                   {p.stato === StatoPrenotazione.Confermata && (
@@ -205,9 +213,9 @@ export function ElencoPrenotazioni({
                       cancelText="No"
                       onConfirm={() => onAnnulla(p)}
                     >
-                      <Button size="small" danger>
-                        Annulla
-                      </Button>
+                      <Tooltip title="Annulla prenotazione">
+                        <Button size="small" danger icon={<StopOutlined />} />
+                      </Tooltip>
                     </Popconfirm>
                   )}
                 </Space>

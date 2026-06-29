@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Popconfirm, Space, Spin, Table, Tag, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Alert, Button, Popconfirm, Space, Spin, Table, Tag, Tooltip, Typography } from "antd";
+import { CheckCircleOutlined, PlusOutlined, StopOutlined } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { useAuth } from "../auth/AuthContext";
 import { getErrorMessage } from "../api/client";
@@ -135,9 +135,13 @@ function PrenotazioniPaziente() {
             title: "Stato",
             key: "stato",
             render: (_, p) => (
-              <Space>
+              <Space size={4} wrap>
                 <Tag color={COLORE_STATO[p.stato]}>{ETICHETTE_STATO_PRENOTAZIONE[p.stato]}</Tag>
-                {p.confermataDalPaziente && <Tag color="green">Presenza confermata</Tag>}
+                {p.stato === StatoPrenotazione.Confermata && (
+                  p.confermataDalPaziente
+                    ? <Tag color="success">Presenza confermata</Tag>
+                    : <Tag color="warning">In attesa di conferma</Tag>
+                )}
               </Space>
             ),
           },
@@ -148,9 +152,14 @@ function PrenotazioniPaziente() {
               p.stato === StatoPrenotazione.Confermata ? (
                 <Space>
                   {!p.confermataDalPaziente && (
-                    <Button size="small" type="primary" onClick={() => handleConferma(p)}>
-                      Conferma presenza
-                    </Button>
+                    <Tooltip title="Conferma presenza">
+                      <Button
+                        type="primary"
+                        size="small"
+                        icon={<CheckCircleOutlined />}
+                        onClick={() => handleConferma(p)}
+                      />
+                    </Tooltip>
                   )}
                   <Popconfirm
                     title="Annullare la prenotazione?"
@@ -158,9 +167,9 @@ function PrenotazioniPaziente() {
                     cancelText="No"
                     onConfirm={() => handleAnnulla(p)}
                   >
-                    <Button size="small" danger>
-                      Annulla
-                    </Button>
+                    <Tooltip title="Annulla prenotazione">
+                      <Button size="small" danger icon={<StopOutlined />} />
+                    </Tooltip>
                   </Popconfirm>
                 </Space>
               ) : null,

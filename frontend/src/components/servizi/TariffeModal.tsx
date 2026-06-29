@@ -129,9 +129,16 @@ export function TariffeModal({ open, prestazione, onClose }: TariffeModalProps) 
     <Modal
       open={open}
       title={prestazione ? `Tariffe — ${prestazione.nome}` : "Tariffe"}
-      footer={<Button onClick={onClose}>Chiudi</Button>}
+      footer={
+        <Space>
+          <Button type="primary" loading={salvataggio} onClick={() => form.submit()}>
+            {inModifica ? "Salva" : "Aggiungi"}
+          </Button>
+          {inModifica && <Button onClick={handleAnnullaModifica}>Annulla modifica</Button>}
+        </Space>
+      }
       onCancel={onClose}
-      destroyOnClose
+      destroyOnHidden
       width={560}
     >
       {errore && <Alert type="error" message={errore} style={{ marginBottom: 16 }} />}
@@ -194,12 +201,6 @@ export function TariffeModal({ open, prestazione, onClose }: TariffeModalProps) 
         >
           <InputNumber min={0.01} step={0.01} style={{ width: 140 }} />
         </Form.Item>
-        <Space>
-          <Button type="primary" htmlType="submit" loading={salvataggio}>
-            {inModifica ? "Salva" : "Aggiungi"}
-          </Button>
-          {inModifica && <Button onClick={handleAnnullaModifica}>Annulla</Button>}
-        </Space>
       </Form>
     </Modal>
   );

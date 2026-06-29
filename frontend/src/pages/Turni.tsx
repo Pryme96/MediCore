@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Button, Popconfirm, Segmented, Select, Space, Spin, Table, Typography } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { Alert, Button, Popconfirm, Segmented, Select, Space, Spin, Table, Tooltip, Typography } from "antd";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useAuth } from "../auth/AuthContext";
 import { getErrorMessage } from "../api/client";
 import { deleteTurno, getTurni, getTurniMiei, getTurniPerMedico } from "../api/turni";
@@ -161,18 +161,23 @@ function TurniAmministratore() {
               key: "azioni",
               render: (_, turno) => (
                 <Space>
-                  <Button size="small" onClick={() => setFormModal({ open: true, turno })}>
-                    Modifica
-                  </Button>
+                  <Tooltip title="Modifica turno">
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => setFormModal({ open: true, turno })}
+                    />
+                  </Tooltip>
                   <Popconfirm
                     title="Eliminare il turno?"
                     okText="Elimina"
                     cancelText="Annulla"
                     onConfirm={() => handleElimina(turno)}
                   >
-                    <Button size="small" danger>
-                      Elimina
-                    </Button>
+                    <Tooltip title="Elimina turno">
+                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+                    </Tooltip>
                   </Popconfirm>
                 </Space>
               ),
