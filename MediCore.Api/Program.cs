@@ -135,6 +135,10 @@ try
         var services = scope.ServiceProvider;
         await services.GetRequiredService<AppDbContext>().Database.MigrateAsync();
         await IdentityDataSeeder.SeedAsync(services, app.Configuration);
+
+        // Dati dimostrativi (catalogo, medici, turni, pazienti) solo se esplicitamente abilitati.
+        if (app.Configuration.GetValue<bool>("DemoData:Enabled"))
+            await DemoDataSeeder.SeedAsync(services);
     }
 
     app.UseSerilogRequestLogging();

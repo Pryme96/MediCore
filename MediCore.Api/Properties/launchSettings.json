@@ -18,7 +18,8 @@
         "ASPNETCORE_ENVIRONMENT": "Development",
         "Mistral__DemoMode": "true",
         "ConnectionStrings__DefaultConnection": "Data Source=medicore.test.db",
-        "FileStorage__LocalPath": "App_Data/Referti.Test"
+        "FileStorage__LocalPath": "App_Data/Referti.Test",
+        "DemoData__Enabled": "false"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5095"
