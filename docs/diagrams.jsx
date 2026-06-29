@@ -114,6 +114,7 @@ const ER_ENTITIES = [
       { name: "SlotId", type: "FK", fk: true },
       { name: "Regime", type: "enum" },
       { name: "Stato", type: "enum" },
+      { name: "ConfermataDalPaziente", type: "bool" },
       { name: "Note", type: "string" },
       ...AUDIT_FIELDS,
     ],
@@ -175,6 +176,24 @@ const ER_ENTITIES = [
       ...AUDIT_FIELDS,
     ],
   },
+  {
+    name: "Notifica",
+    color: "#9333ea",
+    note: "promemoria / avvisi al paziente",
+    attrs: [
+      { name: "NotificaId", type: "PK", pk: true },
+      { name: "DestinatarioUserId", type: "FK", fk: true },
+      { name: "Tipo", type: "enum" },
+      { name: "Titolo", type: "string" },
+      { name: "Messaggio", type: "string" },
+      { name: "RiferimentoId", type: "guid?" },
+      { name: "Letta", type: "bool" },
+      { name: "StatoInvio", type: "enum" },
+      { name: "DataInvio", type: "datetime?" },
+      { name: "Canale", type: "enum" },
+      ...AUDIT_FIELDS,
+    ],
+  },
 ];
 
 const ER_RELATIONS = [
@@ -193,52 +212,56 @@ const ER_RELATIONS = [
   { from: "Paziente",     to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
   { from: "Medico",       to: "Prescrizione",  label: "1..N", fromSide: "bottom", toSide: "top"   },
   { from: "Prescrizione", to: "RigaPrescrizione", label: "1..N", fromSide: "right", toSide: "left" },
+  { from: "AppUser",      to: "Notifica",      label: "1..N", fromSide: "bottom", toSide: "top"   },
 ];
 
 const USE_CASES = {
   actors: ["Paziente", "Medico", "Amministratore", "Sistema AI (Mistral)"],
   actorColors: { "Paziente": "#2563eb", "Medico": "#0891b2", "Amministratore": "#7c3aed", "Sistema AI (Mistral)": "#4f46e5" },
   cases: [
-    { id: "UC01", name: "Registrazione / Login",             actors: ["Paziente", "Medico", "Amministratore"] },
-    { id: "UC02", name: "Cerca prestazione disponibile",     actors: ["Paziente"] },
-    { id: "UC03", name: "Prenota visita (sceglie turno)",    actors: ["Paziente"] },
-    { id: "UC04", name: "Visualizza/annulla prenotazione",   actors: ["Paziente", "Medico", "Amministratore"] },
-    { id: "UC05", name: "Visualizza calendario turni",       actors: ["Medico", "Amministratore"] },
-    { id: "UC06", name: "Gestisci turni ambulatorio",        actors: ["Amministratore"] },
-    { id: "UC07", name: "Carica referto",                    actors: ["Medico"] },
-    { id: "UC08", name: "Visualizza referti",                actors: ["Paziente", "Medico"] },
-    { id: "UC09", name: "Emetti prescrizione",               actors: ["Medico"] },
-    { id: "UC10", name: "Ricevi notifica prescrizione",      actors: ["Paziente"] },
-    { id: "UC11", name: "Visualizza storico prescrizioni",   actors: ["Paziente", "Medico"] },
-    { id: "UC12", name: "Dashboard KPI finanziaria",         actors: ["Amministratore"] },
-    { id: "UC13", name: "Commento AI dashboard",             actors: ["Amministratore", "Sistema AI (Mistral)"] },
-    { id: "UC14", name: "Assistenza AI redazione prescrizione (HITL)", actors: ["Medico", "Sistema AI (Mistral)"] },
-    { id: "UC15", name: "Gestione fatture",                   actors: ["Amministratore"] },
-    { id: "UC16", name: "Gestione utenti e ruoli",           actors: ["Amministratore"] },
-    { id: "UC17", name: "Gestione servizi e prestazioni",    actors: ["Amministratore"] },
-    { id: "UC18", name: "Visualizza proprie fatture",        actors: ["Paziente"] },
-    { id: "UC19", name: "Gestisci profilo medico",           actors: ["Medico", "Amministratore"] },
+    { id: "UC01", name: "Registrazione / Login",                       actors: ["Paziente", "Medico", "Amministratore"] },
+    { id: "UC02", name: "Cerca prestazione e slot disponibili",        actors: ["Paziente"] },
+    { id: "UC03", name: "Prenota visita (sceglie turno)",              actors: ["Paziente"] },
+    { id: "UC04", name: "Prenota per un paziente",                     actors: ["Medico", "Amministratore"] },
+    { id: "UC05", name: "Visualizza / annulla prenotazione",           actors: ["Paziente", "Medico", "Amministratore"] },
+    { id: "UC06", name: "Conferma presenza alla visita",               actors: ["Paziente"] },
+    { id: "UC07", name: "Visualizza agenda e calendario turni",        actors: ["Medico", "Amministratore"] },
+    { id: "UC08", name: "Gestisci turni ambulatorio",                  actors: ["Amministratore"] },
+    { id: "UC09", name: "Carica referto",                              actors: ["Medico"] },
+    { id: "UC10", name: "Visualizza / scarica referti",                actors: ["Paziente", "Medico"] },
+    { id: "UC11", name: "Emetti prescrizione",                         actors: ["Medico"] },
+    { id: "UC12", name: "Assistenza AI redazione prescrizione (HITL)", actors: ["Medico", "Sistema AI (Mistral)"] },
+    { id: "UC13", name: "Visualizza storico prescrizioni",             actors: ["Paziente", "Medico"] },
+    { id: "UC14", name: "Ricevi notifiche (promemoria e prescrizioni)", actors: ["Paziente"] },
+    { id: "UC15", name: "Eroga visita",                                actors: ["Medico", "Amministratore"] },
+    { id: "UC16", name: "Genera fattura (completa prenotazione)",      actors: ["Amministratore"] },
+    { id: "UC17", name: "Visualizza proprie fatture",                  actors: ["Paziente"] },
+    { id: "UC18", name: "Gestione fatture (elenco completo)",          actors: ["Amministratore"] },
+    { id: "UC19", name: "Gestione servizi / prestazioni / tariffe",    actors: ["Amministratore"] },
+    { id: "UC20", name: "Gestione medici",                             actors: ["Amministratore"] },
   ],
 };
 
 const CLASS_DIAGRAM = [
   { name: "AuthController",          type: "Controller", color: "#475569", methods: ["POST /auth/register", "POST /auth/login", "GET /auth/me"] },
-  { name: "PazienteController",      type: "Controller", color: "#2563eb", methods: ["GET /pazienti", "GET /pazienti/{id}", "POST /pazienti", "PUT /pazienti/{id}"] },
-  { name: "MedicoController",        type: "Controller", color: "#0891b2", methods: ["GET /medici", "GET /medici/{id}", "POST /medici", "PUT /medici/{id}"] },
+  { name: "PazienteController",      type: "Controller", color: "#2563eb", methods: ["GET /pazienti"] },
+  { name: "MedicoController",        type: "Controller", color: "#0891b2", methods: ["GET /medici", "GET /medici/{id}", "POST /medici", "PUT /medici/{id}", "POST /medici/{id}/reset-password"] },
   { name: "ServizioController",      type: "Controller", color: "#7c3aed", methods: ["GET /servizi", "GET /servizi/{id}", "GET /servizi/{id}/prestazioni", "POST /servizi", "PUT /servizi/{id}"] },
   { name: "PrestazioneController",   type: "Controller", color: "#0d9488", methods: ["GET /prestazioni", "GET /prestazioni/{id}", "POST /prestazioni", "PUT /prestazioni/{id}"] },
   { name: "TariffaController",       type: "Controller", color: "#854d0e", methods: ["GET /tariffe/{id}", "GET /tariffe/prestazione/{id}", "POST /tariffe", "PUT /tariffe/{id}", "DELETE /tariffe/{id}"] },
-  { name: "TurnoController",         type: "Controller", color: "#065f46", methods: ["GET /turni", "GET /turni/{id}", "GET /turni/medico/{medicoId}", "POST /turni", "PUT /turni/{id}", "DELETE /turni/{id}"] },
-  { name: "SlotController",          type: "Controller", color: "#047857", methods: ["GET /slot/disponibili", "GET /slot/{id}", "POST /slot/blocca/{id}"] },
-  { name: "PrenotazioneController",  type: "Controller", color: "#059669", methods: ["GET /prenotazioni", "POST /prenotazioni", "PATCH /prenotazioni/{id}/stato", "DELETE /prenotazioni/{id}"] },
-  { name: "RefertoController",       type: "Controller", color: "#d97706", methods: ["GET /referti/paziente/{id}", "POST /referti", "GET /referti/{id}/download"] },
-  { name: "PrescrizioneController",  type: "Controller", color: "#dc2626", methods: ["GET /prescrizioni/paziente/{id}", "POST /prescrizioni", "POST /prescrizioni/{id}/notifica"] },
-  { name: "FatturaController",       type: "Controller", color: "#be185d", methods: ["GET /fatture/paziente/{id}", "POST /fatture", "PATCH /fatture/{id}/stato", "GET /fatture/{id}"] },
-  { name: "DashboardController",     type: "Controller", color: "#475569", methods: ["GET /dashboard/kpi", "GET /dashboard/fatturato", "GET /dashboard/commento-ai"] },
+  { name: "TurnoController",         type: "Controller", color: "#065f46", methods: ["GET /turni", "GET /turni/{id}", "GET /turni/medico/{medicoId}", "GET /turni/miei", "POST /turni", "PUT /turni/{id}", "DELETE /turni/{id}"] },
+  { name: "SlotController",          type: "Controller", color: "#047857", methods: ["GET /slot/prestazione/{prestazioneId}"] },
+  { name: "PrenotazioneController",  type: "Controller", color: "#059669", methods: ["POST /prenotazioni", "GET /prenotazioni", "GET /prenotazioni/{id}", "GET /prenotazioni/mie", "GET /prenotazioni/agenda", "PUT /prenotazioni/{id}/annulla", "PUT /prenotazioni/{id}/conferma-presenza", "PUT /prenotazioni/{id}/eroga", "PUT /prenotazioni/{id}/completa"] },
+  { name: "RefertoController",       type: "Controller", color: "#d97706", methods: ["POST /referti", "GET /referti/{id}", "GET /referti/prenotazione/{prenotazioneId}", "GET /referti/{id}/file"] },
+  { name: "PrescrizioneController",  type: "Controller", color: "#dc2626", methods: ["POST /prescrizioni", "GET /prescrizioni/{id}", "GET /prescrizioni/mie", "GET /prescrizioni/emesse"] },
+  { name: "FatturaController",       type: "Controller", color: "#be185d", methods: ["GET /fatture", "GET /fatture/{id}", "GET /fatture/mie"] },
+  { name: "NotificaController",      type: "Controller", color: "#9333ea", methods: ["GET /notifiche/mie", "GET /notifiche/non-lette/count", "PUT /notifiche/{id}/letta", "POST /notifiche/genera-promemoria"] },
   { name: "AiController",            type: "Controller", color: "#4f46e5", methods: ["POST /ai/suggerisci"] },
-  { name: "MistralService",          type: "Service",    color: "#4f46e5", methods: ["SuggerisciPrescrizioneAsync()", "GenerateDashboardCommentAsync()", "BuildContext()"] },
-  { name: "FileStorageService",      type: "Service",    color: "#d97706", methods: ["UploadAsync()", "DownloadAsync()", "DeleteAsync()"] },
-  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<RigaPrescrizione>", "DbSet<Fattura>", "SaveChangesAsync() [audit]"] },
+  { name: "MistralService",          type: "Service",    color: "#4f46e5", methods: ["SuggerisciAsync(DatiClinici)", "ModalitaDemo (stub se manca ApiKey)"] },
+  { name: "FileStorageService",      type: "Service",    color: "#d97706", methods: ["SaveAsync()", "OpenReadAsync()", "DeleteAsync()"] },
+  { name: "NotificationSender",      type: "Service",    color: "#9333ea", methods: ["SendAsync()  (LoggingNotificationSender: in-app + log)", "Email/SMS: evoluzione futura"] },
+  { name: "PromemoriaBackgroundService", type: "Worker", color: "#9333ea", methods: ["ExecuteAsync()  (PeriodicTimer)", "GeneraPromemoriaDovutiAsync()"] },
+  { name: "AppDbContext",            type: "DbContext",  color: "#374151", methods: ["DbSet<Paziente>", "DbSet<Medico>", "DbSet<Servizio>", "DbSet<Prestazione>", "DbSet<Tariffa>", "DbSet<Turno>", "DbSet<Slot>", "DbSet<Prenotazione>", "DbSet<Referto>", "DbSet<Prescrizione>", "DbSet<RigaPrescrizione>", "DbSet<Fattura>", "DbSet<Notifica>", "SaveChangesAsync() [audit]"] },
 ];
 
 // ---- Layout positions ----
@@ -256,6 +279,7 @@ const ER_POS = {
   Prenotazione: { x: 220, y: 900  },
   Referto:      { x: 20,  y: 1240 },
   Fattura:      { x: 260, y: 1240 },
+  Notifica:     { x: 960, y: 1240 },
 };
 
 const CARD_W = 200;
@@ -405,7 +429,7 @@ function UseCaseDiagram() {
 }
 
 function ClassDiagram() {
-  const typeIcons = { Controller: "⚙️", Service: "🤖", DbContext: "🗄️" };
+  const typeIcons = { Controller: "⚙️", Service: "🤖", DbContext: "🗄️", Worker: "⏱️" };
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 12 }}>
       {CLASS_DIAGRAM.map(cls => (
@@ -492,6 +516,7 @@ export default function App() {
           <span style={{ color: "#f59e0b" }}>📋 Audit Field</span>
           <span>⚙️ Controller REST</span>
           <span>🤖 Service</span>
+          <span>⏱️ Worker in background</span>
           <span>🗄️ DbContext EF Core</span>
         </div>
       </div>

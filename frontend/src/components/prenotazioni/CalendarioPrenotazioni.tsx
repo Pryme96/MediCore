@@ -13,6 +13,7 @@ const COLORE_STATO_BADGE: Record<StatoPrenotazione, string> = {
   [StatoPrenotazione.Annullata]: "default",
   [StatoPrenotazione.Completata]: "blue",
   [StatoPrenotazione.NonPresentato]: "red",
+  [StatoPrenotazione.Erogata]: "cyan",
 };
 
 const MAX_VISIBILI = 3;
