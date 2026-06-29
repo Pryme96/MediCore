@@ -12,6 +12,7 @@ import { Medici } from "./pages/Medici";
 import { Turni } from "./pages/Turni";
 import { Prenotazioni } from "./pages/Prenotazioni";
 import { Prescrizioni } from "./pages/Prescrizioni";
+import { Referti } from "./pages/Referti";
 
 function App() {
   return (
@@ -46,7 +47,14 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="referti" element={<PlaceholderPage titolo="Referti" />} />
+            <Route
+              path="referti"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Paziente", "Medico"]}>
+                  <Referti />
+                </ProtectedRoute>
+              }
+            />
             <Route path="fatture" element={<PlaceholderPage titolo="Fatture" />} />
             <Route
               path="medici"
