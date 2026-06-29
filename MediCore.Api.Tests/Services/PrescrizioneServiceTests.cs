@@ -4,11 +4,17 @@ using MediCore.Api.Domain.Enums;
 using MediCore.Api.Dtos.Prescrizioni;
 using MediCore.Api.Services;
 using MediCore.Api.Tests.TestUtils;
+using Microsoft.Extensions.Configuration;
 
 namespace MediCore.Api.Tests.Services;
 
 public class PrescrizioneServiceTests
 {
+    // Costruisce il service con un NotificaService reale (sender fittizio): la creazione di una
+    // prescrizione genera anche una notifica al paziente.
+    private static PrescrizioneService CreaService(AppDbContext db) =>
+        new(db, new NotificaService(db, new FakeNotificationSender(), new ConfigurationBuilder().Build()));
+
     private static IReadOnlyList<RigaPrescrizioneRequest> RigheValide() =>
         [new RigaPrescrizioneRequest { Farmaco = "Aspirina 100mg", Posologia = "1 compressa al giorno", Quantita = 1 }];
 
@@ -97,7 +103,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_con_prenotazione_pregressa_restituisce_Ok()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -121,7 +127,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_con_OriginAssistita_true_mantiene_la_provenienza()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -142,7 +148,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_piano_terapeutico_con_diagnosi_restituisce_Ok()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -167,7 +173,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_piano_terapeutico_senza_diagnosi_restituisce_DatiNonValidi()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -188,7 +194,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_senza_righe_restituisce_DatiNonValidi()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -208,7 +214,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_con_riga_senza_farmaco_restituisce_DatiNonValidi()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -228,7 +234,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_senza_prenotazione_pregressa_restituisce_RiferimentoNonValido()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: false);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -248,7 +254,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_con_paziente_inesistente_restituisce_RiferimentoNonValido()
     {
         var (db, medico, _) = await SetupAsync(conPrenotazionePregressa: false);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var request = new PrescrizioneRequest
         {
             PazienteId = Guid.NewGuid(),
@@ -268,7 +274,7 @@ public class PrescrizioneServiceTests
     public async Task CreateAsync_con_DataScadenza_non_successiva_restituisce_DatiNonValidi()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var oggi = DateOnly.FromDateTime(DateTime.Now);
         var request = new PrescrizioneRequest
         {
@@ -289,7 +295,7 @@ public class PrescrizioneServiceTests
     public async Task GetByIdAsync_utente_estraneo_restituisce_NonAutorizzato()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var (_, creata) = await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -309,7 +315,7 @@ public class PrescrizioneServiceTests
     public async Task GetByIdAsync_paziente_proprietario_restituisce_Ok()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         var (_, creata) = await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -330,7 +336,7 @@ public class PrescrizioneServiceTests
     public async Task GetMieAsync_restituisce_solo_le_prescrizioni_del_paziente()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,
@@ -350,7 +356,7 @@ public class PrescrizioneServiceTests
     public async Task GetEmesseAsync_restituisce_solo_le_prescrizioni_del_medico()
     {
         var (db, medico, paziente) = await SetupAsync(conPrenotazionePregressa: true);
-        var service = new PrescrizioneService(db);
+        var service = CreaService(db);
         await service.CreateAsync(new PrescrizioneRequest
         {
             PazienteId = paziente.PazienteId,

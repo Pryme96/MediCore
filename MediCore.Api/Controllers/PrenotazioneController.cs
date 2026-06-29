@@ -64,6 +64,17 @@ public class PrenotazioneController(IPrenotazioneService prenotazioneService) : 
             _ => BadRequest()
         };
 
+    [HttpPut("{id:guid}/conferma-presenza")]
+    public async Task<IActionResult> ConfermaPresenza(Guid id) =>
+        await prenotazioneService.ConfermaPresenzaAsync(id, UserId) switch
+        {
+            EsitoOperazione.Ok => NoContent(),
+            EsitoOperazione.NonTrovato => NotFound(),
+            EsitoOperazione.NonAutorizzato => Forbid(),
+            EsitoOperazione.Conflitto => Conflict("La prenotazione non è confermabile."),
+            _ => BadRequest()
+        };
+
     [HttpPut("{id:guid}/eroga")]
     [Authorize(Roles = $"{AppRoles.Medico},{AppRoles.Amministratore}")]
     public async Task<IActionResult> Eroga(Guid id) =>

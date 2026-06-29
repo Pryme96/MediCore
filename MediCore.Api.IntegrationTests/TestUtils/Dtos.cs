@@ -67,7 +67,8 @@ public enum StatoPrenotazione
     Confermata = 1,
     Annullata = 2,
     Completata = 3,
-    NonPresentato = 4
+    NonPresentato = 4,
+    Erogata = 5
 }
 
 public record PrenotazioneResponse(
@@ -81,6 +82,7 @@ public record PrenotazioneResponse(
     DateTime DataOraFine,
     Regime Regime,
     StatoPrenotazione Stato,
+    bool ConfermataDalPaziente,
     string? Note);
 
 public enum StatoFattura
@@ -152,3 +154,18 @@ public record SuggerimentoResponse(
     IReadOnlyList<SuggerimentoOpzione> Opzioni,
     DatiClinici DatiInviati,
     bool Demo);
+
+public enum TipoNotifica
+{
+    PromemoriaAppuntamento = 1,
+    Prescrizione = 2
+}
+
+public record NotificaResponse(
+    Guid Id,
+    TipoNotifica Tipo,
+    string Titolo,
+    string Messaggio,
+    Guid? RiferimentoId,
+    bool Letta,
+    DateTime DataCreazione);

@@ -11,6 +11,9 @@ public class Prenotazione : AuditableEntity
     public Guid SlotId { get; set; }
     public Regime Regime { get; set; }
     public StatoPrenotazione Stato { get; set; } = StatoPrenotazione.Confermata;
+    // Conferma di presenza fornita dal paziente in risposta al promemoria. Segnale per ridurre
+    // i no-show; l'eventuale gestione automatica delle mancate conferme è evoluzione futura.
+    public bool ConfermataDalPaziente { get; set; }
     public string? Note { get; set; }
 
     public Paziente Paziente { get; set; } = null!;

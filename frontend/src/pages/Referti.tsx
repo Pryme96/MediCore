@@ -10,8 +10,12 @@ import { StatoPrenotazione, type Prenotazione } from "../types/prenotazioni";
 import type { Referto } from "../types/referti";
 import { UploadRefertoModal } from "../components/referti/UploadRefertoModal";
 
-// Solo le prenotazioni per cui ha senso un referto: visite confermate o già completate.
-const STATI_REFERTABILI: number[] = [StatoPrenotazione.Confermata, StatoPrenotazione.Completata];
+// Solo le prenotazioni per cui ha senso un referto: visite confermate, erogate o completate.
+const STATI_REFERTABILI: number[] = [
+  StatoPrenotazione.Confermata,
+  StatoPrenotazione.Erogata,
+  StatoPrenotazione.Completata,
+];
 
 const nomeFileReferto = (p: Prenotazione) =>
   `referto-${p.prestazioneNome}-${dayjs(p.dataOraInizio).format("YYYYMMDD")}.pdf`

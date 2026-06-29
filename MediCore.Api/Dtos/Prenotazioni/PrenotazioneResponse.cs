@@ -14,5 +14,6 @@ public record PrenotazioneResponse
     public DateTime DataOraFine { get; init; }
     public Regime Regime { get; init; }
     public StatoPrenotazione Stato { get; init; }
+    public bool ConfermataDalPaziente { get; init; }
     public string? Note { get; init; }
 }

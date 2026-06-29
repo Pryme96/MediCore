@@ -338,6 +338,24 @@ public class EndToEndScenarioTests
         var mie = await getMieResponse.Content.ReadFromJsonAsync<List<PrenotazioneResponse>>();
         Assert.Contains(mie!, p => p.Id == prenotazione.Id);
 
+        // 14ter. Conferma di presenza: solo il paziente proprietario (un altro utente, qui
+        // l'Amministratore, -> 403); dopo la conferma il flag ConfermataDalPaziente risulta true;
+        // id inesistente -> 404.
+        client.UseToken(tokenAdmin);
+        var confermaComeNonProprietarioResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazione.Id}/conferma-presenza", null);
+        Assert.Equal(HttpStatusCode.Forbidden, confermaComeNonProprietarioResponse.StatusCode);
+
+        client.UseToken(tokenPaziente);
+        var confermaResponse = await client.PutAsync<object?>($"prenotazioni/{prenotazione.Id}/conferma-presenza", null);
+        Assert.Equal(HttpStatusCode.NoContent, confermaResponse.StatusCode);
+
+        var dopoConfermaResponse = await client.GetAsync($"prenotazioni/{prenotazione.Id}");
+        var dopoConferma = await dopoConfermaResponse.Content.ReadFromJsonAsync<PrenotazioneResponse>();
+        Assert.True(dopoConferma!.ConfermataDalPaziente);
+
+        var confermaInesistenteResponse = await client.PutAsync<object?>($"prenotazioni/{Guid.NewGuid()}/conferma-presenza", null);
+        Assert.Equal(HttpStatusCode.NotFound, confermaInesistenteResponse.StatusCode);
+
         // 14bis. GET /prenotazioni/{id} da parte dell'amministratore (non proprietario) -> 200.
         client.UseToken(tokenAdmin);
         var getByIdComeAdminResponse = await client.GetAsync($"prenotazioni/{prenotazione.Id}");
@@ -764,5 +782,38 @@ public class EndToEndScenarioTests
             ContestoClinico = ""
         });
         Assert.Equal(HttpStatusCode.BadRequest, suggerisciSenzaContestoResponse.StatusCode);
+
+        // 42. La creazione di una Prescrizione genera una notifica per il Paziente: la ritrova
+        // nel proprio centro notifiche (riferita alla prescrizione del passo 19) e può marcarla letta.
+        client.UseToken(tokenPaziente);
+        var mieNotificheResponse = await client.GetAsync("notifiche/mie");
+        Assert.Equal(HttpStatusCode.OK, mieNotificheResponse.StatusCode);
+        var mieNotifiche = await mieNotificheResponse.Content.ReadFromJsonAsync<List<NotificaResponse>>();
+        var notificaPrescrizione = mieNotifiche!.Single(
+            n => n.Tipo == TipoNotifica.Prescrizione && n.RiferimentoId == prescrizione!.Id);
+        Assert.False(notificaPrescrizione.Letta);
+
+        var contaNonLetteResponse = await client.GetAsync("notifiche/non-lette/count");
+        Assert.Equal(HttpStatusCode.OK, contaNonLetteResponse.StatusCode);
+        Assert.True(await contaNonLetteResponse.Content.ReadFromJsonAsync<int>() >= 1);
+
+        // 42bis. Marca letta la notifica: 204; rileggendo, risulta letta.
+        var marcaLettaResponse = await client.PutAsync<object?>($"notifiche/{notificaPrescrizione.Id}/letta", null);
+        Assert.Equal(HttpStatusCode.NoContent, marcaLettaResponse.StatusCode);
+        var dopoLetturaResponse = await client.GetAsync("notifiche/mie");
+        var dopoLettura = await dopoLetturaResponse.Content.ReadFromJsonAsync<List<NotificaResponse>>();
+        Assert.True(dopoLettura!.Single(n => n.Id == notificaPrescrizione.Id).Letta);
+
+        // 42ter. Marcare letta una notifica inesistente -> 404.
+        var marcaLettaInesistenteResponse = await client.PutAsync<object?>($"notifiche/{Guid.NewGuid()}/letta", null);
+        Assert.Equal(HttpStatusCode.NotFound, marcaLettaInesistenteResponse.StatusCode);
+
+        // 43. La generazione on-demand dei promemoria è riservata all'Amministratore: Paziente -> 403.
+        var generaComePazienteResponse = await client.PostAsync<object?>("notifiche/genera-promemoria", null);
+        Assert.Equal(HttpStatusCode.Forbidden, generaComePazienteResponse.StatusCode);
+
+        client.UseToken(tokenAdmin);
+        var generaComeAdminResponse = await client.PostAsync<object?>("notifiche/genera-promemoria", null);
+        Assert.Equal(HttpStatusCode.OK, generaComeAdminResponse.StatusCode);
     }
 }

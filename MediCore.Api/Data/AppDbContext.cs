@@ -29,6 +29,7 @@ public class AppDbContext : IdentityDbContext<AppUser>
     public DbSet<Prescrizione> Prescrizioni => Set<Prescrizione>();
     public DbSet<RigaPrescrizione> RighePrescrizione => Set<RigaPrescrizione>();
     public DbSet<Fattura> Fatture => Set<Fattura>();
+    public DbSet<Notifica> Notifiche => Set<Notifica>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder builder)

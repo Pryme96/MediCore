@@ -30,6 +30,11 @@ export const annullaPrenotazione = async (id: string): Promise<void> => {
   await apiClient.put(`/prenotazioni/${id}/annulla`);
 };
 
+// Conferma di presenza del paziente in risposta al promemoria.
+export const confermaPresenza = async (id: string): Promise<void> => {
+  await apiClient.put(`/prenotazioni/${id}/conferma-presenza`);
+};
+
 // Erogazione della visita da parte del medico (o admin): porta la prenotazione a Erogata.
 export const erogaPrenotazione = async (id: string): Promise<void> => {
   await apiClient.put(`/prenotazioni/${id}/eroga`);

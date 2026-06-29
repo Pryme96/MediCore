@@ -3,6 +3,7 @@ using MediCore.Api.Data;
 using MediCore.Api.Domain.Entities;
 using MediCore.Api.Infrastructure;
 using MediCore.Api.Services;
+using MediCore.Api.Services.Notifiche;
 using MediCore.Api.Services.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -82,6 +83,11 @@ try
     builder.Services.AddScoped<IRefertoService, RefertoService>();
     builder.Services.AddScoped<IFatturaService, FatturaService>();
     builder.Services.AddScoped<ISuggerimentoService, SuggerimentoService>();
+    builder.Services.AddScoped<INotificaService, NotificaService>();
+    builder.Services.AddScoped<INotificationSender, LoggingNotificationSender>();
+
+    // Genera periodicamente i promemoria per gli appuntamenti in arrivo (vedi sezione Notifiche).
+    builder.Services.AddHostedService<PromemoriaBackgroundService>();
 
     // Client dell'assistente di redazione clinica (Mistral). La chiave (Mistral:ApiKey) non è
     // committata: in dev va impostata via User Secrets, altrimenti il service va in modalità demo.

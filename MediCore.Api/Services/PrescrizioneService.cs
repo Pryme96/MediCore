@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MediCore.Api.Services;
 
-public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
+public class PrescrizioneService(AppDbContext db, INotificaService notifiche) : IPrescrizioneService
 {
     public async Task<(EsitoOperazione Esito, PrescrizioneResponse? Prescrizione)> CreateAsync(PrescrizioneRequest request, string userId)
     {
@@ -59,6 +59,17 @@ public class PrescrizioneService(AppDbContext db) : IPrescrizioneService
         };
         db.Prescrizioni.Add(prescrizione);
         await db.SaveChangesAsync();
+
+        // Notifica al paziente l'emissione della prescrizione (centro notifiche in-app).
+        var tipoTesto = prescrizione.Tipo == TipoPrescrizione.PianoTerapeutico
+            ? "piano terapeutico"
+            : "prescrizione farmacologica";
+        await notifiche.CreateAsync(
+            paziente.UserId,
+            TipoNotifica.Prescrizione,
+            "Nuova prescrizione",
+            $"Il Dr. {medico.User.Cognome} ha emesso una nuova {tipoTesto} del {prescrizione.DataEmissione:dd/MM/yyyy}.",
+            prescrizione.PrescrizioneId);
 
         return (EsitoOperazione.Ok, ToResponse(prescrizione, paziente, medico));
     }

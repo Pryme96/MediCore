@@ -10,6 +10,7 @@ public interface IPrenotazioneService
     Task<IReadOnlyList<PrenotazioneResponse>> GetAgendaMedicoAsync(string userId);
     Task<IReadOnlyList<PrenotazioneResponse>> GetAllAsync();
     Task<EsitoOperazione> AnnullaAsync(Guid id, string userId, bool isAdmin);
+    Task<EsitoOperazione> ConfermaPresenzaAsync(Guid id, string userId);
     Task<EsitoOperazione> ErogaAsync(Guid id, string userId, bool isAdmin);
     Task<EsitoOperazione> CompletaAsync(Guid id);
 }

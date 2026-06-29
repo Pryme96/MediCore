@@ -7,6 +7,7 @@ import { getErrorMessage } from "../api/client";
 import {
   annullaPrenotazione,
   completaPrenotazione,
+  confermaPresenza,
   erogaPrenotazione,
   getPrenotazioniAgenda,
   getPrenotazioniMie,
@@ -72,6 +73,16 @@ function PrenotazioniPaziente() {
     }
   };
 
+  const handleConferma = async (p: Prenotazione) => {
+    setErrore("");
+    try {
+      await confermaPresenza(p.id);
+      carica();
+    } catch (error) {
+      setErrore(getErrorMessage(error, "Impossibile confermare la presenza."));
+    }
+  };
+
   if (modalita === "nuova") {
     return (
       <StepperPrenotazione
@@ -122,9 +133,12 @@ function PrenotazioniPaziente() {
           },
           {
             title: "Stato",
-            dataIndex: "stato",
-            render: (stato: StatoPrenotazione) => (
-              <Tag color={COLORE_STATO[stato]}>{ETICHETTE_STATO_PRENOTAZIONE[stato]}</Tag>
+            key: "stato",
+            render: (_, p) => (
+              <Space>
+                <Tag color={COLORE_STATO[p.stato]}>{ETICHETTE_STATO_PRENOTAZIONE[p.stato]}</Tag>
+                {p.confermataDalPaziente && <Tag color="green">Presenza confermata</Tag>}
+              </Space>
             ),
           },
           {
@@ -132,16 +146,23 @@ function PrenotazioniPaziente() {
             key: "azioni",
             render: (_, p) =>
               p.stato === StatoPrenotazione.Confermata ? (
-                <Popconfirm
-                  title="Annullare la prenotazione?"
-                  okText="Annulla prenotazione"
-                  cancelText="No"
-                  onConfirm={() => handleAnnulla(p)}
-                >
-                  <Button size="small" danger>
-                    Annulla
-                  </Button>
-                </Popconfirm>
+                <Space>
+                  {!p.confermataDalPaziente && (
+                    <Button size="small" type="primary" onClick={() => handleConferma(p)}>
+                      Conferma presenza
+                    </Button>
+                  )}
+                  <Popconfirm
+                    title="Annullare la prenotazione?"
+                    okText="Annulla prenotazione"
+                    cancelText="No"
+                    onConfirm={() => handleAnnulla(p)}
+                  >
+                    <Button size="small" danger>
+                      Annulla
+                    </Button>
+                  </Popconfirm>
+                </Space>
               ) : null,
           },
         ]}

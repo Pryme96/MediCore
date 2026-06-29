@@ -38,6 +38,7 @@ export interface Prenotazione {
   dataOraFine: string;
   regime: Regime;
   stato: StatoPrenotazione;
+  confermataDalPaziente: boolean;
   note: string | null;
 }
 

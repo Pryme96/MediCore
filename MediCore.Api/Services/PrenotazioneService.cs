@@ -169,6 +169,30 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
 
     // Erogazione della visita: attestazione clinica da parte del medico titolare (o dell'admin).
     // Porta la prenotazione da Confermata a Erogata, senza generare la fattura.
+    // Conferma di presenza da parte del paziente proprietario, in risposta al promemoria.
+    public async Task<EsitoOperazione> ConfermaPresenzaAsync(Guid id, string userId)
+    {
+        var prenotazione = await db.Prenotazioni
+            .Include(p => p.Paziente)
+            .FirstOrDefaultAsync(p => p.PrenotazioneId == id);
+        if (prenotazione is null)
+            return EsitoOperazione.NonTrovato;
+
+        if (prenotazione.Paziente.UserId != userId)
+            return EsitoOperazione.NonAutorizzato;
+
+        if (prenotazione.Stato != StatoPrenotazione.Confermata)
+            return EsitoOperazione.Conflitto;
+
+        if (!prenotazione.ConfermataDalPaziente)
+        {
+            prenotazione.ConfermataDalPaziente = true;
+            await db.SaveChangesAsync();
+        }
+
+        return EsitoOperazione.Ok;
+    }
+
     public async Task<EsitoOperazione> ErogaAsync(Guid id, string userId, bool isAdmin)
     {
         var prenotazione = await db.Prenotazioni
@@ -235,6 +259,7 @@ public class PrenotazioneService(AppDbContext db) : IPrenotazioneService
         DataOraFine = slot.DataOraFine,
         Regime = prenotazione.Regime,
         Stato = prenotazione.Stato,
+        ConfermataDalPaziente = prenotazione.ConfermataDalPaziente,
         Note = prenotazione.Note
     };
 }

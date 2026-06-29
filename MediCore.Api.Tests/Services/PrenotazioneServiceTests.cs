@@ -297,6 +297,48 @@ public class PrenotazioneServiceTests
         Assert.Equal(EsitoOperazione.Conflitto, esito);
     }
 
+    [Fact]
+    public async Task ConfermaPresenzaAsync_dal_paziente_proprietario_imposta_il_flag()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var esito = await service.ConfermaPresenzaAsync(creata!.Id, paziente.UserId);
+
+        Assert.Equal(EsitoOperazione.Ok, esito);
+        Assert.True((await db.Prenotazioni.FindAsync(creata.Id))!.ConfermataDalPaziente);
+    }
+
+    [Fact]
+    public async Task ConfermaPresenzaAsync_da_altro_utente_restituisce_NonAutorizzato()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+
+        var esito = await service.ConfermaPresenzaAsync(creata!.Id, "altro-utente");
+
+        Assert.Equal(EsitoOperazione.NonAutorizzato, esito);
+        Assert.False((await db.Prenotazioni.FindAsync(creata.Id))!.ConfermataDalPaziente);
+    }
+
+    [Fact]
+    public async Task ConfermaPresenzaAsync_su_prenotazione_annullata_restituisce_Conflitto()
+    {
+        var (db, paziente, slot) = await SetupAsync();
+        var service = new PrenotazioneService(db);
+        var (_, creata) = await service.CreateAsync(
+            new PrenotazioneRequest { SlotId = slot.SlotId, Regime = Regime.Ssn }, paziente.UserId, puoPrenotarePerAltri: false);
+        await service.AnnullaAsync(creata!.Id, paziente.UserId, isAdmin: false);
+
+        var esito = await service.ConfermaPresenzaAsync(creata.Id, paziente.UserId);
+
+        Assert.Equal(EsitoOperazione.Conflitto, esito);
+    }
+
     private static async Task<(AppDbContext Db, Medico Medico, Paziente Paziente, Slot Slot)> SetupConTariffaAsync(decimal prezzo = 80)
     {
         var (db, paziente, slot) = await SetupAsync();

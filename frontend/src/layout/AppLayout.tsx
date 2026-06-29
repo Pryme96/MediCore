@@ -15,6 +15,7 @@ import {
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { palette } from "../theme/colors";
+import { CampanelloNotifiche } from "../components/notifiche/CampanelloNotifiche";
 
 const { Header, Sider, Content } = Layout;
 
@@ -92,6 +93,7 @@ export function AppLayout() {
             boxShadow: "0 2px 8px rgba(0, 0, 0, 0.06)",
           }}
         >
+          {user?.ruoli.includes("Paziente") && <CampanelloNotifiche />}
           <Avatar icon={<UserOutlined />} style={{ background: palette.primary }} />
           <Typography.Text style={{ color: palette.primary }}>{user?.email}</Typography.Text>
           <Button type="primary" icon={<LogoutOutlined />} onClick={handleLogout}>Logout</Button>

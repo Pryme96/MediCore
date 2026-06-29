@@ -13,6 +13,7 @@ import { Prenotazioni } from "./pages/Prenotazioni";
 import { Prescrizioni } from "./pages/Prescrizioni";
 import { Referti } from "./pages/Referti";
 import { Fatture } from "./pages/Fatture";
+import { Notifiche } from "./pages/Notifiche";
 
 function App() {
   return (
@@ -60,6 +61,14 @@ function App() {
               element={
                 <ProtectedRoute ruoliConsentiti={["Paziente", "Amministratore"]}>
                   <Fatture />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="notifiche"
+              element={
+                <ProtectedRoute ruoliConsentiti={["Paziente"]}>
+                  <Notifiche />
                 </ProtectedRoute>
               }
             />
