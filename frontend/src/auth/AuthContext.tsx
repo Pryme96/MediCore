@@ -2,6 +2,8 @@ import { createContext, useContext, useState, type ReactNode } from "react";
 
 interface AuthUser {
   email: string;
+  nome: string;
+  cognome: string;
   ruoli: string[];
 }
 
@@ -19,9 +21,15 @@ function decodeUserFromToken(token: string): AuthUser {
     payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] ?? payload.role ?? [];
   const emailClaim =
     payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"] ?? payload.email ?? "";
+  const nomeClaim =
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"] ?? payload.given_name ?? "";
+  const cognomeClaim =
+    payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname"] ?? payload.family_name ?? "";
 
   return {
     email: emailClaim,
+    nome: nomeClaim,
+    cognome: cognomeClaim,
     ruoli: Array.isArray(rolesClaim) ? rolesClaim : [rolesClaim],
   };
 }
