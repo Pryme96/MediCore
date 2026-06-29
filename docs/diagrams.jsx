@@ -145,6 +145,7 @@ const ER_ENTITIES = [
       { name: "DataScadenza", type: "date" },
       { name: "Note", type: "string" },
       { name: "NotificaInviata", type: "bool" },
+      { name: "OriginAssistita", type: "bool" },
       ...AUDIT_FIELDS,
     ],
   },
