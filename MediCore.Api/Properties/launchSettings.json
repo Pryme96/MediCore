@@ -16,7 +16,9 @@
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "Mistral__DemoMode": "true"
+        "Mistral__DemoMode": "true",
+        "ConnectionStrings__DefaultConnection": "Data Source=medicore.test.db",
+        "FileStorage__LocalPath": "App_Data/Referti.Test"
       },
       "dotnetRunMessages": true,
       "applicationUrl": "http://localhost:5095"
